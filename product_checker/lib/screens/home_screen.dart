@@ -13,13 +13,9 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 40),
-          const Text(
+          Text(
             'Verify Products in Seconds',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+            style: Theme.of(context).textTheme.displaySmall,
           ),
           const SizedBox(height: 40),
           // Search Bar Widget
@@ -29,23 +25,23 @@ class HomeScreen extends StatelessWidget {
           ActionButtonWidget(
             text: 'Verify Product',
             icon: Icons.search,
-            backgroundColor: Colors.black,
-            textColor: Colors.white,
-            iconColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            textColor: Theme.of(context).colorScheme.onPrimary,
+            iconColor: Theme.of(context).colorScheme.onPrimary,
             onPressed: () { 
             },
           ),
           const SizedBox(height: 10),
           // Search by Image Button
           ActionButtonWidget(
-          text: 'Search by Image', 
-          icon: Icons.image_search, 
-          backgroundColor: Colors.white, 
-          textColor: Colors.black, 
-          iconColor: Colors.black, 
-          onPressed: () {
+            text: 'Search by Image', 
+            icon: Icons.image_search, 
+            backgroundColor: Theme.of(context).colorScheme.surface, 
+            textColor: Theme.of(context).colorScheme.onSurface, 
+            iconColor: Theme.of(context).colorScheme.onSurface, 
+            onPressed: () {
 
-          }
+            }
           )
         ],
       ),

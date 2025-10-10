@@ -27,6 +27,9 @@ class ActionButtonWidget extends StatelessWidget {
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
+          foregroundColor: textColor,
+          elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -42,6 +45,7 @@ class ActionButtonWidget extends StatelessWidget {
                 color: textColor,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
               ),
             ),
           ],

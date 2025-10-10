@@ -7,11 +7,11 @@ class SearchBarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Theme.of(context).colorScheme.shadow,
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -21,8 +21,11 @@ class SearchBarWidget extends StatelessWidget {
       child: TextField(
         decoration: InputDecoration(
           hintText: 'Enter product name, brand, or CPR number',
-          hintStyle: TextStyle(color: Colors.grey[500]),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
+          hintStyle: Theme.of(context).textTheme.bodySmall,
+          prefixIcon: Icon(
+            Icons.search, 
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
