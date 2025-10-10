@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home_screen.dart';
 import 'saved_screen.dart';
 import 'reports_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
@@ -22,6 +23,12 @@ class _MainScreenState extends State<MainScreen> {
     const ProfileScreen(),
     const SettingScreen(),
   ];
+
+  void _onTabTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +50,7 @@ class _MainScreenState extends State<MainScreen> {
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex < 4 ? _currentIndex : 0,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: _onTabTapped,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(

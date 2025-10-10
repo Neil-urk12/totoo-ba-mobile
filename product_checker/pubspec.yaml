@@ -36,7 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # State management
-  flutter_riverpod: ^2.4.9
+  # Note: Riverpod 3.0+ has breaking changes. Keeping at 2.6.1 for stability.
+  # To upgrade to 3.0+, extensive refactoring of providers will be needed.
+  flutter_riverpod: ^2.6.1
 
 dev_dependencies:
   flutter_test:
@@ -47,7 +49,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
