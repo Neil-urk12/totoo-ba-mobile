@@ -34,7 +34,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LigmaCheck'),
+        title: const Text('Totoo Ba?'),
         centerTitle: true,
         actions: [
           IconButton(
