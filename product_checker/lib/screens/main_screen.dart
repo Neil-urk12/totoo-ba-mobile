@@ -5,6 +5,7 @@ import 'saved_screen.dart';
 import 'reports_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
+import '../providers/saved_records_provider.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -28,6 +29,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     setState(() {
       _currentIndex = index;
     });
+    
+    // Trigger reset when navigating to saved screen (index 1)
+    if (index == 1) {
+      ref.read(resetSavedScreenProvider.notifier).state = !ref.read(resetSavedScreenProvider);
+    }
   }
 
   @override

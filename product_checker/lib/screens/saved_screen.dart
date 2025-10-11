@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/saved_records_provider.dart';
-import '../widgets/verification_record_card.dart';
-import '../models/verification_record.dart';
+import '../widgets/drug_product_card.dart';
+import '../models/drug_product.dart';
 
 class SavedScreen extends ConsumerStatefulWidget {
   const SavedScreen({super.key});
@@ -14,6 +14,7 @@ class SavedScreen extends ConsumerStatefulWidget {
 class _SavedScreenState extends ConsumerState<SavedScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
@@ -27,6 +28,21 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     super.dispose();
   }
 
+  void _clearSearchState() {
+    if (mounted && _hasInitialized) {
+      // Clear search query and reset filters
+      ref.read(searchQueryProvider.notifier).state = '';
+      ref.read(selectedFilterProvider.notifier).state = 'All';
+      ref.read(selectedCategoryProvider.notifier).state = 'All';
+      
+      // Clear the search controller text
+      _searchController.clear();
+      
+      // Force a rebuild to reflect the cleared state
+      setState(() {});
+    }
+  }
+
   Future<void> _simulateLoading() async {
     setState(() {
       _isLoading = true;
@@ -38,6 +54,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     if (mounted) {
       setState(() {
         _isLoading = false;
+        _hasInitialized = true;
       });
     }
   }
@@ -45,10 +62,18 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredRecords = ref.watch(filteredRecordsProvider);
+    final allRecords = ref.watch(savedRecordsProvider);
     final availableCategories = ref.watch(availableCategoriesProvider);
     final availableStatuses = ref.watch(availableStatusesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final selectedStatus = ref.watch(selectedFilterProvider);
+    
+    // Listen for reset trigger
+    ref.listen(resetSavedScreenProvider, (previous, next) {
+      if (_hasInitialized) {
+        _clearSearchState();
+      }
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -83,7 +108,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                       ref.read(searchQueryProvider.notifier).state = value;
                     },
                     decoration: InputDecoration(
-                      hintText: 'Search by product, brand, or CPR number...',
+                      hintText: 'Search by generic name, brand, registration number, or manufacturer...',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
@@ -116,7 +141,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                       Expanded(
                         child: _buildFilterDropdown(
                           context,
-                          'Category',
+                          'Classification',
                           selectedCategory,
                           availableCategories,
                           (value) {
@@ -134,20 +159,22 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
             Expanded(
               child: _isLoading
                   ? _buildSkeletonLoading(context)
-                  : filteredRecords.isEmpty
+                  : allRecords.isEmpty
                       ? _buildEmptyState(context)
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: filteredRecords.length,
-                          itemBuilder: (context, index) {
-                            final record = filteredRecords[index];
-                            return VerificationRecordCard(
-                              record: record,
-                              onTap: () => _showRecordDetails(context, record),
-                              onDelete: () => _showDeleteConfirmation(context, record),
-                            );
-                          },
-                        ),
+                      : filteredRecords.isEmpty
+                          ? _buildNoResultsState(context)
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: filteredRecords.length,
+                              itemBuilder: (context, index) {
+                                final product = filteredRecords[index];
+                                return DrugProductCard(
+                                  product: product,
+                                  onTap: () => _showProductDetails(context, product),
+                                  onDelete: () => _showDeleteConfirmation(context, product),
+                                );
+                              },
+                            ),
             ),
           ],
         ),
@@ -176,6 +203,8 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
         DropdownButtonFormField<String>(
           initialValue: selectedValue,
           onChanged: onChanged,
+          isExpanded: true,
+          menuMaxHeight: MediaQuery.of(context).size.height * 0.4,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(
@@ -203,9 +232,11 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
           items: options.map((option) {
             return DropdownMenuItem<String>(
               value: option,
-      child: Text(
+              child: Text(
                 option,
                 style: Theme.of(context).textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             );
           }).toList(),
@@ -215,6 +246,16 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
           ),
           dropdownColor: Theme.of(context).colorScheme.surface,
           style: Theme.of(context).textTheme.bodyMedium,
+          selectedItemBuilder: (BuildContext context) {
+            return options.map<Widget>((String item) {
+              return Text(
+                item,
+                style: Theme.of(context).textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              );
+            }).toList();
+          },
         ),
       ],
     );
@@ -242,7 +283,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Product name skeleton with shimmer effect
+                        // Generic name skeleton with shimmer effect
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -265,7 +306,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                         ),
                         const SizedBox(height: 8),
                         
-                        // Brand skeleton
+                        // Brand name skeleton
                         _buildAnimatedSkeleton(
                           context,
                           height: 16,
@@ -274,7 +315,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                         ),
                         const SizedBox(height: 12),
                         
-                        // CPR number and status row
+                        // Registration number and classification row
                         Row(
                           children: [
                             _buildAnimatedSkeleton(
@@ -299,9 +340,9 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         
-                        // Date and category row
+                        // Dosage and manufacturer row
                         Row(
                           children: [
                             _buildAnimatedSkeleton(
@@ -393,26 +434,46 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No Saved Verifications',
+            'No Saved Drug Products',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Start verifying products to save them here',
+            'Start adding drug products to save them here',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              // Navigate to home screen for verification
-              DefaultTabController.of(context).animateTo(0);
-            },
-            icon: const Icon(Icons.search),
-            label: const Text('Start Verifying'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 80,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Results Found',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your search or filters',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
           ),
         ],
       ),
@@ -425,7 +486,11 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -435,83 +500,110 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            ...sortOptions.map((option) {
-              return ListTile(
-                title: Text(option),
-                trailing: currentSort == option 
-                    ? const Icon(Icons.check, color: Colors.blue)
-                    : null,
-                onTap: () {
-                  ref.read(selectedSortProvider.notifier).state = option;
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Sorted by $option'),
-                      duration: const Duration(seconds: 1),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: sortOptions.map((option) {
+                  return ListTile(
+                    title: Text(
+                      option,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
+                    trailing: currentSort == option 
+                        ? const Icon(Icons.check, color: Colors.blue)
+                        : null,
+                    onTap: () {
+                      ref.read(selectedSortProvider.notifier).state = option;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Sorted by $option'),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    },
                   );
-                },
-              );
-            }),
+                }).toList(),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _showRecordDetails(BuildContext context, VerificationRecord record) {
+  void _showProductDetails(BuildContext context, DrugProduct product) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.7,
         maxChildSize: 0.9,
         minChildSize: 0.5,
         builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Title
-              Text(
-                'Verification Details',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 20),
-              
-              // Details
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDetailRow('Product Name', record.productName),
-                      _buildDetailRow('Brand', record.brand),
-                      _buildDetailRow('CPR Number', record.cprNumber),
-                      _buildDetailRow('Category', record.category),
-                      _buildDetailRow('Status', record.status.toUpperCase()),
-                      _buildDetailRow('FDA Status', record.fdaStatus),
-                      _buildDetailRow('Verification Date', 
-                          '${record.verificationDate.day}/${record.verificationDate.month}/${record.verificationDate.year}'),
-                    ],
+                const SizedBox(height: 20),
+                
+                // Title
+                Text(
+                  'Drug Product Details',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 20),
+                
+                // Details
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailRow('Generic Name', product.genericName),
+                        _buildDetailRow('Brand Name', product.brandName),
+                        _buildDetailRow('Registration Number', product.registrationNumber),
+                        _buildDetailRow('Dosage Strength', product.dosageStrength),
+                        _buildDetailRow('Dosage Form', product.dosageForm),
+                        _buildDetailRow('Classification', product.classification),
+                        _buildDetailRow('Pharmacologic Category', product.pharmacologicCategory),
+                        _buildDetailRow('Manufacturer', product.manufacturer),
+                        _buildDetailRow('Country of Origin', product.countryOfOrigin),
+                        _buildDetailRow('Application Type', product.applicationType),
+                        _buildDetailRow('Issuance Date', 
+                            '${product.issuanceDate.day}/${product.issuanceDate.month}/${product.issuanceDate.year}'),
+                        _buildDetailRow('Expiry Date', 
+                            '${product.expiryDate.day}/${product.expiryDate.month}/${product.expiryDate.year}'),
+                        _buildDetailRow('Status', product.status),
+                        _buildDetailRow('Days Until Expiry', '${product.daysUntilExpiry} days'),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -541,12 +633,12 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, VerificationRecord record) {
+  void _showDeleteConfirmation(BuildContext context, DrugProduct product) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Verification'),
-        content: Text('Are you sure you want to delete "${record.productName}" from your saved verifications?'),
+        title: const Text('Delete Drug Product'),
+        content: Text('Are you sure you want to delete "${product.genericName} (${product.brandName})" from your saved products?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -554,10 +646,10 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
           ),
           TextButton(
             onPressed: () {
-              ref.read(savedRecordsProvider.notifier).removeRecord(record.id);
+              ref.read(savedRecordsProvider.notifier).removeRecord(product.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Verification deleted')),
+                const SnackBar(content: Text('Drug product deleted')),
               );
             },
             child: const Text('Delete'),

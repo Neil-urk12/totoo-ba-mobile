@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../models/verification_record.dart';
+import '../models/drug_product.dart';
 
-class VerificationRecordCard extends StatelessWidget {
-  final VerificationRecord record;
+class DrugProductCard extends StatelessWidget {
+  final DrugProduct product;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
-  const VerificationRecordCard({
+  const DrugProductCard({
     super.key,
-    required this.record,
+    required this.product,
     this.onTap,
     this.onDelete,
   });
@@ -25,13 +25,13 @@ class VerificationRecordCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with status and date
+              // Header with status and expiry date
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildStatusChip(context),
                   Text(
-                    _formatDate(record.verificationDate),
+                    'Expires: ${_formatDate(product.expiryDate)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -40,9 +40,9 @@ class VerificationRecordCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               
-              // Product name
+              // Generic name
               Text(
-                record.productName,
+                product.genericName,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -51,22 +51,22 @@ class VerificationRecordCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               
-              // Brand
+              // Brand name
               Text(
-                record.brand,
+                product.brandName,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 8),
               
-              // CPR Number and Category
+              // Registration Number and Classification
               Row(
                 children: [
                   Expanded(
                     child: _buildInfoChip(
                       context,
-                      'CPR: ${record.cprNumber}',
+                      'Reg: ${product.registrationNumber}',
                       Icons.assignment,
                     ),
                   ),
@@ -74,25 +74,47 @@ class VerificationRecordCard extends StatelessWidget {
                   Expanded(
                     child: _buildInfoChip(
                       context,
-                      record.category,
+                      product.classification,
                       Icons.category,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              // Dosage and Manufacturer
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInfoChip(
+                      context,
+                      '${product.dosageStrength} ${product.dosageForm}',
+                      Icons.medication,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildInfoChip(
+                      context,
+                      product.manufacturer,
+                      Icons.business,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               
-              // FDA Status
+              // Status and Delete button
               Row(
                 children: [
                   Icon(
-                    Icons.verified,
+                    _getStatusIcon(),
                     size: 16,
                     color: _getStatusColor(context),
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    record.fdaStatus,
+                    product.status,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: _getStatusColor(context),
                       fontWeight: FontWeight.w500,
@@ -119,7 +141,7 @@ class VerificationRecordCard extends StatelessWidget {
 
   Widget _buildStatusChip(BuildContext context) {
     final statusColor = _getStatusColor(context);
-    final statusText = _getStatusText();
+    final statusText = product.status;
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -177,37 +199,43 @@ class VerificationRecordCard extends StatelessWidget {
   }
 
   Color _getStatusColor(BuildContext context) {
-    switch (record.status.toLowerCase()) {
-      case 'verified':
+    switch (product.status.toLowerCase()) {
+      case 'active':
         return Colors.green;
-      case 'notverified':
+      case 'expiring soon':
+        return Colors.orange;
+      case 'expired':
         return Colors.red;
       default:
         return Theme.of(context).colorScheme.onSurface;
     }
   }
 
-  String _getStatusText() {
-    switch (record.status.toLowerCase()) {
-      case 'verified':
-        return 'Verified';
-      case 'notverified':
-        return 'Not Verified';
+  IconData _getStatusIcon() {
+    switch (product.status.toLowerCase()) {
+      case 'active':
+        return Icons.check_circle;
+      case 'expiring soon':
+        return Icons.warning;
+      case 'expired':
+        return Icons.cancel;
       default:
-        return record.status;
+        return Icons.help;
     }
   }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    final difference = now.difference(date).inDays;
+    final difference = date.difference(now).inDays;
     
-    if (difference == 0) {
+    if (difference < 0) {
+      return 'Expired';
+    } else if (difference == 0) {
       return 'Today';
     } else if (difference == 1) {
-      return 'Yesterday';
-    } else if (difference < 7) {
-      return '$difference days ago';
+      return 'Tomorrow';
+    } else if (difference < 30) {
+      return '$difference days';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
