@@ -1,132 +1,185 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
+import '../providers/image_search_provider.dart';
+import 'image_processing_screen.dart';
 
-class ImageSearchScreen extends StatefulWidget {
+class ImageSearchScreen extends ConsumerStatefulWidget {
   const ImageSearchScreen({super.key});
 
   @override
-  State<ImageSearchScreen> createState() => _ImageSearchScreenState();
+  ConsumerState<ImageSearchScreen> createState() => _ImageSearchScreenState();
 }
 
-class _ImageSearchScreenState extends State<ImageSearchScreen> {
-  final ImagePicker _picker = ImagePicker();
-  File? _selectedImage;
-  bool _isProcessing = false;
+class _ImageSearchScreenState extends ConsumerState<ImageSearchScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Reset provider state when entering this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(imageSearchProvider.notifier).reset();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final provider = ref.watch(imageSearchProvider);
+    final notifier = ref.read(imageSearchProvider.notifier);
+    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search by Image'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Section
-            Text(
-              'Image Product Search',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Take a photo or upload an image to verify your product',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Image Preview Section
-            if (_selectedImage != null) ...[
-              Container(
-                width: double.infinity,
-                height: 200,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+          appBar: AppBar(
+            title: const Text('Search by Image'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Section
+                Text(
+                  'Image Product Search',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    _selectedImage!,
-                    fit: BoxFit.cover,
+                const SizedBox(height: 6),
+                Text(
+                  'Take a photo or upload an image to verify your product',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 24),
 
-            // Action Buttons
-            if (_selectedImage == null) ...[
-              if (!kIsWeb) ...[
-                _buildActionButton(
-                  context,
-                  'Take Photo',
-                  'Use your camera to capture the product',
-                  Icons.camera_alt,
-                  Colors.blue,
-                  () => _pickImage(ImageSource.camera),
-                ),
-                const SizedBox(height: 12),
-              ],
-              _buildActionButton(
-                context,
-                kIsWeb ? 'Select Image File' : 'Upload Image',
-                kIsWeb ? 'Choose an image file from your device' : 'Select an image from your gallery',
-                Icons.photo_library,
-                Colors.green,
-                () => _pickImage(ImageSource.gallery),
-              ),
-            ] else ...[
-              // Process and Retake buttons when image is selected
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionButton(
-                      context,
-                      'Retake Photo',
-                      'Take a new photo',
-                      Icons.refresh,
-                      Colors.orange,
-                      () => _retakePhoto(),
+                // Error message
+                if (provider.hasError) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            provider.errorMessage,
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: Colors.red),
+                          onPressed: () => notifier.reset(),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildActionButton(
-                      context,
-                      'Search Product',
-                      'Verify this product',
-                      Icons.search,
-                      Theme.of(context).colorScheme.primary,
-                      () => _searchProduct(),
+                  const SizedBox(height: 16),
+                ],
+
+                // Image Preview Section
+                if (provider.hasImage) ...[
+                  Container(
+                    width: double.infinity,
+                    height: 350,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                      ),
                     ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        provider.selectedImage!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // Action Buttons
+                if (!provider.hasImage) ...[
+                  if (!kIsWeb) ...[
+                    _buildActionButton(
+                      context,
+                      'Take Photo',
+                      'Use your camera to capture the product',
+                      Icons.camera_alt,
+                      Colors.blue,
+                      () => _pickImage(context, ImageSource.camera, notifier),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  _buildActionButton(
+                    context,
+                    kIsWeb ? 'Select Image File' : 'Upload Image',
+                    kIsWeb ? 'Choose an image file from your device' : 'Select an image from your gallery',
+                    Icons.photo_library,
+                    Colors.green,
+                    () => _pickImage(context, ImageSource.gallery, notifier),
+                  ),
+                ] else ...[
+                  // Process and Retake buttons when image is selected
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(
+                          context,
+                          'Retake Photo',
+                          'Take a new photo',
+                          Icons.refresh,
+                          Colors.orange,
+                          () => _retakePhoto(context, notifier),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildActionButton(
+                          context,
+                          'Search Product',
+                          'Verify this product',
+                          Icons.search,
+                          Theme.of(context).colorScheme.primary,
+                          () => _searchProduct(context, provider),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-              _buildProcessingIndicator(),
-            ],
 
-            const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-            // Compact Information Section
-            _buildCompactInfoSection(context),
-          ],
-        ),
-      ),
-    );
+                // Compact Information Section
+                _buildCompactInfoSection(context),
+              ],
+            ),
+          ),
+        );
   }
 
   Widget _buildActionButton(
@@ -246,8 +299,8 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
             Icons.camera_alt_outlined,
             'Clear product',
             kIsWeb 
-              ? 'Make sure product name, brand, or barcode is clearly visible in the image'
-              : 'Make sure product name, brand, or barcode is visible',
+              ? 'Make sure product name and brand are clearly visible in the image'
+              : 'Make sure product name and brand are visible',
           ),
           const SizedBox(height: 12),
           _buildCompactTip(
@@ -296,198 +349,53 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      // Check if running on web
-      if (kIsWeb) {
-        await _pickImageWeb(source);
-        return;
-      }
-
-      // Request permissions for mobile platforms
-      bool hasPermission = false;
-      if (source == ImageSource.camera) {
-        hasPermission = await _requestCameraPermission();
-      } else {
-        hasPermission = await _requestStoragePermission();
-      }
-
-      if (!hasPermission) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Permission denied. Please enable ${source == ImageSource.camera ? 'camera' : 'storage'} permission in settings.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error picking image: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _pickImageWeb(ImageSource source) async {
-    try {
-      // For web, we can only use gallery (file picker)
-      if (source == ImageSource.camera) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Camera is not supported on web. Please use "Upload Image" instead.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Use file picker for web
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        // For web, we need to handle the file differently
-        await image.readAsBytes(); // Read bytes to ensure file is accessible
-        setState(() {
-          // Create a temporary file representation for web
-          _selectedImage = File(image.path);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error picking image: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<bool> _requestCameraPermission() async {
-    final status = await Permission.camera.request();
-    return status.isGranted;
-  }
-
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      // For Android 13+ (API 33+), use READ_MEDIA_IMAGES
-      if (await Permission.photos.isGranted) {
-        return true;
-      }
-      
-      final status = await Permission.photos.request();
-      if (status.isGranted) {
-        return true;
-      }
-      
-      // Fallback to storage permission for older Android versions
-      final storageStatus = await Permission.storage.request();
-      return storageStatus.isGranted;
-    } else {
-      // For iOS, use photos permission
-      final status = await Permission.photos.request();
-      return status.isGranted;
-    }
-  }
-
-  void _retakePhoto() {
-    setState(() {
-      _selectedImage = null;
-    });
-  }
-
-  void _searchProduct() {
-    if (_selectedImage == null) return;
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    // Simulate processing
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-        
-        // Show result dialog or navigate to results
-        _showSearchResult();
-      }
-    });
-  }
-
-  Widget _buildProcessingIndicator() {
-    if (!_isProcessing) return const SizedBox.shrink();
+  Future<void> _pickImage(BuildContext context, ImageSource source, ImageSearchNotifier notifier) async {
+    final success = await notifier.pickImage(source);
     
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.primary,
-              ),
-            ),
+    if (!success && mounted && context.mounted) {
+      // Get the current state to access error message
+      final currentState = ref.read(imageSearchProvider);
+      
+      // Only show error message if there's an actual error (not just cancellation)
+      if (currentState.hasError && currentState.errorMessage.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(currentState.errorMessage),
+            backgroundColor: Colors.orange,
           ),
-          const SizedBox(width: 12),
-          Text(
-            'Processing image...',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
+        );
+      }
+      // If no error message, it means user just cancelled - no need to show anything
+    }
   }
 
-  void _showSearchResult() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Search Complete'),
-        content: const Text('Product verification completed. Results will be displayed here.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).pop(); // Go back to home screen
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  void _retakePhoto(BuildContext context, ImageSearchNotifier notifier) {
+    // Open camera directly for retaking photo
+    _pickImage(context, ImageSource.camera, notifier);
   }
+
+  void _searchProduct(BuildContext context, ImageSearchStateModel provider) {
+    if (!provider.hasImage) return;
+
+    // Store the image file before resetting
+    final imageFile = provider.selectedImage!;
+    
+    // Reset the entire provider state to clear everything
+    ref.read(imageSearchProvider.notifier).reset();
+    
+    // Navigate to processing screen with the stored image
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ImageProcessingScreen(
+          imageFile: imageFile,
+        ),
+      ),
+    ).then((_) {
+      // Reset state again when returning from processing screen
+      if (mounted) {
+        ref.read(imageSearchProvider.notifier).reset();
+      }
+    });
+  }
+
 }
