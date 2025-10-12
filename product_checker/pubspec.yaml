@@ -39,6 +39,12 @@ dependencies:
   # Note: Riverpod 3.0+ has breaking changes. Keeping at 2.6.1 for stability.
   # To upgrade to 3.0+, extensive refactoring of providers will be needed.
   flutter_riverpod: ^2.6.1
+  
+  # Image picker for camera and gallery access
+  image_picker: ^1.0.4
+  
+  # Permission handler for runtime permissions
+  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_test:
