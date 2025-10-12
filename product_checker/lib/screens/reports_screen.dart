@@ -50,7 +50,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget build(BuildContext context) {
     final isLoading = ref.watch(isLoadingProvider);
     final filteredReports = ref.watch(filteredReportsProvider);
-    final selectedSortOption = ref.watch(selectedSortOptionProvider);
     final controller = ref.read(reportsScreenControllerProvider.notifier);
 
     // Listen for reset trigger
@@ -169,7 +168,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        initialValue: selectedSortOption,
+                        initialValue: ref.read(selectedSortOptionProvider),
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -443,153 +442,77 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget _buildSkeletonLoading() {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: 6, // Show 6 skeleton cards
+      itemCount: 4, // Reduced from 6 to 4
       itemBuilder: (context, index) {
-        return TweenAnimationBuilder<double>(
-          duration: Duration(milliseconds: 300 + (index * 100)), // Staggered animation
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            return Transform.translate(
-              offset: Offset(0, 20 * (1 - value)), // Slide up animation
-              child: Opacity(
-                opacity: value,
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Product name skeleton
-                        _buildAnimatedSkeleton(
-                          context,
-                          height: 20,
-                          width: double.infinity,
-                          delay: Duration(milliseconds: index * 50),
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // Registration number skeleton
-                        _buildAnimatedSkeleton(
-                          context,
-                          height: 14,
-                          width: 150,
-                          delay: Duration(milliseconds: index * 50 + 100),
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // Reporter skeleton
-                        _buildAnimatedSkeleton(
-                          context,
-                          height: 14,
-                          width: 120,
-                          delay: Duration(milliseconds: index * 50 + 200),
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        // Description skeleton (3 lines)
-                        _buildAnimatedSkeleton(
-                          context,
-                          height: 14,
-                          width: double.infinity,
-                          delay: Duration(milliseconds: index * 50 + 300),
-                        ),
-                        const SizedBox(height: 6),
-                        _buildAnimatedSkeleton(
-                          context,
-                          height: 14,
-                          width: double.infinity * 0.8,
-                          delay: Duration(milliseconds: index * 50 + 400),
-                        ),
-                        const SizedBox(height: 6),
-                        _buildAnimatedSkeleton(
-                          context,
-                          height: 14,
-                          width: double.infinity * 0.6,
-                          delay: Duration(milliseconds: index * 50 + 500),
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        // Location skeleton
-                        Row(
-                          children: [
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 16,
-                              width: 16,
-                              delay: Duration(milliseconds: index * 50 + 600),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 14,
-                              width: 200,
-                              delay: Duration(milliseconds: index * 50 + 700),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // Time skeleton
-                        Row(
-                          children: [
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 16,
-                              width: 16,
-                              delay: Duration(milliseconds: index * 50 + 800),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 14,
-                              width: 80,
-                              delay: Duration(milliseconds: index * 50 + 900),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+          elevation: 1, // Reduced elevation
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Product name skeleton
+                _buildSimpleSkeleton(context, height: 20),
+                const SizedBox(height: 8),
+                
+                // Registration number skeleton
+                _buildSimpleSkeleton(context, height: 14, width: 150),
+                const SizedBox(height: 8),
+                
+                // Reporter skeleton
+                _buildSimpleSkeleton(context, height: 14, width: 120),
+                const SizedBox(height: 12),
+                
+                // Description skeleton (3 lines)
+                _buildSimpleSkeleton(context, height: 14),
+                const SizedBox(height: 6),
+                _buildSimpleSkeleton(context, height: 14, width: double.infinity * 0.8),
+                const SizedBox(height: 6),
+                _buildSimpleSkeleton(context, height: 14, width: double.infinity * 0.6),
+                const SizedBox(height: 12),
+                
+                // Location skeleton
+                Row(
+                  children: [
+                    _buildSimpleSkeleton(context, height: 16, width: 16),
+                    const SizedBox(width: 8),
+                    _buildSimpleSkeleton(context, height: 14, width: 200),
+                  ],
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 8),
+                
+                // Time skeleton
+                Row(
+                  children: [
+                    _buildSimpleSkeleton(context, height: 16, width: 16),
+                    const SizedBox(width: 8),
+                    _buildSimpleSkeleton(context, height: 14, width: 80),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildAnimatedSkeleton(BuildContext context, {
+  Widget _buildSimpleSkeleton(BuildContext context, {
     required double height,
-    required double width,
-    required Duration delay,
+    double? width,
   }) {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 1500),
-      tween: Tween(begin: 0.3, end: 1.0),
-      builder: (context, value, child) {
-        return Container(
-          height: height,
-          width: width,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08 + (value * 0.12)),
-            borderRadius: BorderRadius.circular(6),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-        );
-      },
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
     );
   }
 }

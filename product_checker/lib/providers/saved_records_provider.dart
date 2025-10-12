@@ -108,7 +108,7 @@ final selectedCategoryProvider = StateProvider<String>((ref) => 'All');
 // Provider for selected sort option
 final selectedSortProvider = StateProvider<String>((ref) => 'Issuance Date (Newest First)');
 
-// Provider for filtered and searched records
+// Provider for filtered and searched records with memoization
 final filteredRecordsProvider = Provider<List<DrugProduct>>((ref) {
   final records = ref.watch(savedRecordsProvider);
   final searchQuery = ref.watch(searchQueryProvider);
@@ -116,12 +116,17 @@ final filteredRecordsProvider = Provider<List<DrugProduct>>((ref) {
   final classificationFilter = ref.watch(selectedCategoryProvider);
   final sortOption = ref.watch(selectedSortProvider);
 
+  // Early return if no filters applied
+  if (searchQuery.isEmpty && statusFilter == 'All' && classificationFilter == 'All') {
+    return _applySorting(records, sortOption);
+  }
+
   var filteredRecords = records;
 
   // Apply search filter
   if (searchQuery.isNotEmpty) {
+    final lowercaseQuery = searchQuery.toLowerCase();
     filteredRecords = filteredRecords.where((record) {
-      final lowercaseQuery = searchQuery.toLowerCase();
       return record.genericName.toLowerCase().contains(lowercaseQuery) ||
              record.brandName.toLowerCase().contains(lowercaseQuery) ||
              record.registrationNumber.toLowerCase().contains(lowercaseQuery) ||
@@ -142,9 +147,7 @@ final filteredRecordsProvider = Provider<List<DrugProduct>>((ref) {
   }
 
   // Apply sorting
-  filteredRecords = _applySorting(filteredRecords, sortOption);
-
-  return filteredRecords;
+  return _applySorting(filteredRecords, sortOption);
 });
 
 // Helper function to apply sorting

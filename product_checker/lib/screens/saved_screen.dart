@@ -19,7 +19,11 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
   @override
   void initState() {
     super.initState();
-    _simulateLoading();
+    // Clear search state when screen is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _clearSearchState();
+      _simulateLoading();
+    });
   }
 
   @override
@@ -29,14 +33,18 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
   }
 
   void _clearSearchState() {
-    if (mounted && _hasInitialized) {
+    if (mounted) {
       // Clear search query and reset filters
       ref.read(searchQueryProvider.notifier).state = '';
       ref.read(selectedFilterProvider.notifier).state = 'All';
       ref.read(selectedCategoryProvider.notifier).state = 'All';
+      ref.read(selectedSortProvider.notifier).state = 'Issuance Date (Newest First)';
       
       // Clear the search controller text
       _searchController.clear();
+      
+      // Mark as initialized
+      _hasInitialized = true;
       
       // Force a rebuild to reflect the cleared state
       setState(() {});
@@ -48,13 +56,12 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
       _isLoading = true;
     });
     
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Minimal delay for smooth transition
+    await Future.delayed(const Duration(milliseconds: 300));
     
     if (mounted) {
       setState(() {
         _isLoading = false;
-        _hasInitialized = true;
       });
     }
   }
@@ -63,10 +70,6 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
   Widget build(BuildContext context) {
     final filteredRecords = ref.watch(filteredRecordsProvider);
     final allRecords = ref.watch(savedRecordsProvider);
-    final availableCategories = ref.watch(availableCategoriesProvider);
-    final availableStatuses = ref.watch(availableStatusesProvider);
-    final selectedCategory = ref.watch(selectedCategoryProvider);
-    final selectedStatus = ref.watch(selectedFilterProvider);
     
     // Listen for reset trigger
     ref.listen(resetSavedScreenProvider, (previous, next) {
@@ -130,8 +133,8 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                         child: _buildFilterDropdown(
                           context,
                           'Status',
-                          selectedStatus,
-                          availableStatuses,
+                          ref.read(selectedFilterProvider),
+                          ref.read(availableStatusesProvider),
                           (value) {
                             ref.read(selectedFilterProvider.notifier).state = value ?? 'All';
                           },
@@ -142,8 +145,8 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                         child: _buildFilterDropdown(
                           context,
                           'Classification',
-                          selectedCategory,
-                          availableCategories,
+                          ref.read(selectedCategoryProvider),
+                          ref.read(availableCategoriesProvider),
                           (value) {
                             ref.read(selectedCategoryProvider.notifier).state = value ?? 'All';
                           },
@@ -264,161 +267,75 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
   Widget _buildSkeletonLoading(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: 6, // Show 6 skeleton cards
+      itemCount: 4, // Reduced from 6 to 4
       itemBuilder: (context, index) {
-        return TweenAnimationBuilder<double>(
-          duration: Duration(milliseconds: 300 + (index * 100)), // Staggered animation
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            return Transform.translate(
-              offset: Offset(0, 20 * (1 - value)), // Slide up animation
-              child: Opacity(
-                opacity: value,
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Generic name skeleton with shimmer effect
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: _buildAnimatedSkeleton(
-                                context,
-                                height: 24,
-                                width: double.infinity,
-                                delay: Duration(milliseconds: index * 50),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 24,
-                              width: 24,
-                              delay: Duration(milliseconds: index * 50 + 100),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // Brand name skeleton
-                        _buildAnimatedSkeleton(
-                          context,
-                          height: 16,
-                          width: 120,
-                          delay: Duration(milliseconds: index * 50 + 200),
-                        ),
-                        const SizedBox(height: 12),
-                        
-                        // Registration number and classification row
-                        Row(
-                          children: [
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 16,
-                              width: 16,
-                              delay: Duration(milliseconds: index * 50 + 300),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 16,
-                              width: 100,
-                              delay: Duration(milliseconds: index * 50 + 400),
-                            ),
-                            const Spacer(),
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 20,
-                              width: 80,
-                              delay: Duration(milliseconds: index * 50 + 500),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        
-                        // Dosage and manufacturer row
-                        Row(
-                          children: [
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 16,
-                              width: 16,
-                              delay: Duration(milliseconds: index * 50 + 600),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 16,
-                              width: 80,
-                              delay: Duration(milliseconds: index * 50 + 700),
-                            ),
-                            const Spacer(),
-                            _buildAnimatedSkeleton(
-                              context,
-                              height: 16,
-                              width: 100,
-                              delay: Duration(milliseconds: index * 50 + 800),
-                            ),
-                          ],
-                        ),
-                      ],
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+          elevation: 1, // Reduced elevation
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Generic name skeleton
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: _buildSimpleSkeleton(context, height: 24),
                     ),
-                  ),
+                    const SizedBox(width: 16),
+                    _buildSimpleSkeleton(context, height: 24, width: 24),
+                  ],
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 8),
+                
+                // Brand name skeleton
+                _buildSimpleSkeleton(context, height: 16, width: 120),
+                const SizedBox(height: 12),
+                
+                // Registration number and classification row
+                Row(
+                  children: [
+                    _buildSimpleSkeleton(context, height: 16, width: 16),
+                    const SizedBox(width: 8),
+                    _buildSimpleSkeleton(context, height: 16, width: 100),
+                    const Spacer(),
+                    _buildSimpleSkeleton(context, height: 20, width: 80),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                
+                // Dosage and manufacturer row
+                Row(
+                  children: [
+                    _buildSimpleSkeleton(context, height: 16, width: 16),
+                    const SizedBox(width: 8),
+                    _buildSimpleSkeleton(context, height: 16, width: 80),
+                    const Spacer(),
+                    _buildSimpleSkeleton(context, height: 16, width: 100),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildAnimatedSkeleton(BuildContext context, {
+  Widget _buildSimpleSkeleton(BuildContext context, {
     required double height,
-    required double width,
-    required Duration delay,
+    double? width,
   }) {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 1500),
-      tween: Tween(begin: 0.3, end: 1.0),
-      builder: (context, value, child) {
-        return Container(
-          height: height,
-          width: width,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08 + (value * 0.12)),
-            borderRadius: BorderRadius.circular(6),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: AnimatedBuilder(
-              animation: AlwaysStoppedAnimation(value),
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: ShimmerPainter(
-                    progress: value,
-                    baseColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-                    highlightColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      },
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
     );
   }
 
@@ -657,46 +574,5 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
         ],
       ),
     );
-  }
-}
-
-class ShimmerPainter extends CustomPainter {
-  final double progress;
-  final Color baseColor;
-  final Color highlightColor;
-
-  ShimmerPainter({
-    required this.progress,
-    required this.baseColor,
-    required this.highlightColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          baseColor,
-          highlightColor,
-          baseColor,
-        ],
-        stops: [
-          0.0,
-          0.5,
-          1.0,
-        ],
-        transform: GradientRotation(progress * 2 * 3.14159),
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-  }
-
-  @override
-  bool shouldRepaint(ShimmerPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-           oldDelegate.baseColor != baseColor ||
-           oldDelegate.highlightColor != highlightColor;
   }
 }

@@ -16,28 +16,36 @@ final reportsProvider = Provider<List<Report>>((ref) {
   return MockData.savedReports;
 });
 
-// Filtered reports provider
+// Filtered reports provider with memoization
 final filteredReportsProvider = Provider<List<Report>>((ref) {
   final reports = ref.watch(reportsProvider);
   final searchQuery = ref.watch(searchQueryProvider);
   final selectedSortOption = ref.watch(selectedSortOptionProvider);
 
-  List<Report> filteredReports = reports;
-
-  // Apply search filter
-  if (searchQuery.isNotEmpty) {
-    filteredReports = filteredReports.where((report) {
-      return report.productName.toLowerCase().contains(searchQuery.toLowerCase()) ||
-             report.brandName?.toLowerCase().contains(searchQuery.toLowerCase()) == true ||
-             report.description.toLowerCase().contains(searchQuery.toLowerCase()) ||
-             report.location?.toLowerCase().contains(searchQuery.toLowerCase()) == true ||
-             report.storeName?.toLowerCase().contains(searchQuery.toLowerCase()) == true;
-    }).toList();
+  // Early return if no search query
+  if (searchQuery.isEmpty) {
+    return _applySorting(reports, selectedSortOption);
   }
 
+  // Apply search filter
+  final filteredReports = reports.where((report) {
+    final lowercaseQuery = searchQuery.toLowerCase();
+    return report.productName.toLowerCase().contains(lowercaseQuery) ||
+           report.brandName?.toLowerCase().contains(lowercaseQuery) == true ||
+           report.description.toLowerCase().contains(lowercaseQuery) ||
+           report.location?.toLowerCase().contains(lowercaseQuery) == true ||
+           report.storeName?.toLowerCase().contains(lowercaseQuery) == true;
+  }).toList();
+
   // Apply sorting
-  filteredReports.sort((a, b) {
-    switch (selectedSortOption) {
+  return _applySorting(filteredReports, selectedSortOption);
+});
+
+// Helper function to apply sorting
+List<Report> _applySorting(List<Report> reports, String sortOption) {
+  final sortedReports = List<Report>.from(reports);
+  sortedReports.sort((a, b) {
+    switch (sortOption) {
       case 'Report Date (Newest First)':
         return b.reportDate.compareTo(a.reportDate);
       case 'Report Date (Oldest First)':
@@ -58,14 +66,13 @@ final filteredReportsProvider = Provider<List<Report>>((ref) {
         return b.reportDate.compareTo(a.reportDate);
     }
   });
-
-  return filteredReports;
-});
+  return sortedReports;
+}
 
 // Loading simulation provider
 final loadingSimulationProvider = FutureProvider<void>((ref) async {
-  // Simulate network delay
-  await Future.delayed(const Duration(milliseconds: 1500));
+  // Minimal delay for smooth transition
+  await Future.delayed(const Duration(milliseconds: 300));
   
   // Set loading to false
   ref.read(isLoadingProvider.notifier).state = false;
@@ -95,7 +102,7 @@ class ReportsScreenController extends StateNotifier<void> {
 
   void simulateLoading() async {
     startLoading();
-    await Future.delayed(const Duration(milliseconds: 1500));
+    await Future.delayed(const Duration(milliseconds: 300));
     stopLoading();
   }
 
