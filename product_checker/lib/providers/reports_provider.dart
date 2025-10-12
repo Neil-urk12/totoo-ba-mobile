@@ -11,10 +11,37 @@ final selectedSortOptionProvider = StateProvider<String>((ref) => 'Report Date (
 // Loading state provider
 final isLoadingProvider = StateProvider<bool>((ref) => true);
 
-// Reports provider
-final reportsProvider = Provider<List<Report>>((ref) {
-  return MockData.savedReports;
+// Reports state provider
+final reportsStateProvider = StateNotifierProvider<ReportsNotifier, List<Report>>((ref) {
+  return ReportsNotifier();
 });
+
+// Reports provider (now uses the state notifier)
+final reportsProvider = Provider<List<Report>>((ref) {
+  return ref.watch(reportsStateProvider);
+});
+
+// Reports Notifier class
+class ReportsNotifier extends StateNotifier<List<Report>> {
+  ReportsNotifier() : super(MockData.savedReports);
+
+  void addReport(Report report) {
+    state = [report, ...state];
+  }
+
+  void removeReport(String reportId) {
+    state = state.where((report) => report.id != reportId).toList();
+  }
+
+  void updateReport(Report updatedReport) {
+    state = state.map((report) {
+      if (report.id == updatedReport.id) {
+        return updatedReport;
+      }
+      return report;
+    }).toList();
+  }
+}
 
 // Filtered reports provider with memoization
 final filteredReportsProvider = Provider<List<Report>>((ref) {

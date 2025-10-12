@@ -21,6 +21,9 @@ class ImageSearchStateModel {
   final String errorMessage;
   final String currentProcessingMessage;
   final double processingProgress;
+  final bool isProductRegistered;
+  final String? detectedProductName;
+  final String? detectedBrandName;
 
   const ImageSearchStateModel({
     this.state = ImageSearchState.idle,
@@ -29,6 +32,9 @@ class ImageSearchStateModel {
     this.errorMessage = '',
     this.currentProcessingMessage = '',
     this.processingProgress = 0.0,
+    this.isProductRegistered = false,
+    this.detectedProductName,
+    this.detectedBrandName,
   });
 
   ImageSearchStateModel copyWith({
@@ -38,6 +44,9 @@ class ImageSearchStateModel {
     String? errorMessage,
     String? currentProcessingMessage,
     double? processingProgress,
+    bool? isProductRegistered,
+    String? detectedProductName,
+    String? detectedBrandName,
   }) {
     return ImageSearchStateModel(
       state: state ?? this.state,
@@ -46,6 +55,9 @@ class ImageSearchStateModel {
       errorMessage: errorMessage ?? this.errorMessage,
       currentProcessingMessage: currentProcessingMessage ?? this.currentProcessingMessage,
       processingProgress: processingProgress ?? this.processingProgress,
+      isProductRegistered: isProductRegistered ?? this.isProductRegistered,
+      detectedProductName: detectedProductName ?? this.detectedProductName,
+      detectedBrandName: detectedBrandName ?? this.detectedBrandName,
     );
   }
 
@@ -72,6 +84,9 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
     'Generating detailed report...',
     'Finalizing results...',
   ];
+
+  // Static counter to track search attempts for alternating results
+  static int _searchCount = 0;
 
   ImageSearchNotifier() : super(const ImageSearchStateModel());
 
@@ -212,13 +227,35 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
       // Simulate API call for search results
       await Future.delayed(const Duration(seconds: 1));
       
-      // In a real app, this would be an API call
-      final searchResults = mock.MockData.savedDrugProducts.take(3).toList();
+      // Simulate AI detection of product information
+      final detectedProductName = 'Paracetamol 500mg';
+      final detectedBrandName = 'MediCare';
       
-      state = state.copyWith(
-        state: ImageSearchState.completed,
-        searchResults: searchResults,
-      );
+      // Simple alternating pattern: first search = verified, second = unverified, third = verified, etc.
+      _searchCount++;
+      final isRegistered = _searchCount % 2 == 1; // Odd numbers = verified, even numbers = unverified
+      
+      if (isRegistered) {
+        // Product is registered - return single matching product
+        final searchResults = mock.MockData.savedDrugProducts.take(1).toList();
+        
+        state = state.copyWith(
+          state: ImageSearchState.completed,
+          searchResults: searchResults,
+          isProductRegistered: true,
+          detectedProductName: detectedProductName,
+          detectedBrandName: detectedBrandName,
+        );
+      } else {
+        // Product is not registered - no results
+        state = state.copyWith(
+          state: ImageSearchState.completed,
+          searchResults: [],
+          isProductRegistered: false,
+          detectedProductName: detectedProductName,
+          detectedBrandName: detectedBrandName,
+        );
+      }
     } catch (e) {
       _setError('Error processing image: $e');
     }
@@ -262,18 +299,6 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
       errorMessage: message,
       state: ImageSearchState.error,
     );
-  }
-
-  // Search result actions
-  void saveProduct(DrugProduct product) {
-    // In a real app, this would save to local storage or send to backend
-    // For now, we'll just add it to a saved products list
-    // This could be integrated with the existing saved records provider
-  }
-
-  void viewProductDetails(DrugProduct product) {
-    // In a real app, this would navigate to a detailed product view
-    // For now, this is a placeholder for future implementation
   }
 }
 

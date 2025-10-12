@@ -5,6 +5,7 @@ import '../models/drug_product.dart';
 import '../providers/image_search_provider.dart';
 import '../providers/saved_records_provider.dart';
 import 'image_search_screen.dart';
+import 'report_form_screen.dart';
 
 class ImageSearchResultsScreen extends ConsumerWidget {
   final File imageFile;
@@ -80,10 +81,14 @@ class ImageSearchResultsScreen extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: provider.isProductRegistered 
+          ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+          color: provider.isProductRegistered 
+            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+            : Colors.orange.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -92,17 +97,21 @@ class ImageSearchResultsScreen extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                Icons.check_circle,
-                color: Theme.of(context).colorScheme.primary,
+                provider.isProductRegistered ? Icons.check_circle : Icons.warning,
+                color: provider.isProductRegistered 
+                  ? Theme.of(context).colorScheme.primary 
+                  : Colors.orange,
                 size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Search Completed',
+                  provider.isProductRegistered ? 'Product Verified' : 'Product Not Found',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: provider.isProductRegistered 
+                      ? Theme.of(context).colorScheme.primary 
+                      : Colors.orange,
                   ),
                 ),
               ),
@@ -110,7 +119,9 @@ class ImageSearchResultsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Found ${provider.searchResults.length} matching products',
+            provider.isProductRegistered 
+              ? 'This product is registered and verified in our database'
+              : 'This product was not found in our database',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
@@ -145,57 +156,118 @@ class ImageSearchResultsScreen extends ConsumerWidget {
   }
 
   Widget _buildResultsSection(BuildContext context, WidgetRef ref, ImageSearchStateModel provider) {
-    if (provider.searchResults.isEmpty) {
-      return _buildNoResults(context);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Matching Products',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+    if (provider.isProductRegistered && provider.searchResults.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Product Details',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        ...provider.searchResults.map((product) => _buildProductCard(context, ref, product)),
-      ],
-    );
+          const SizedBox(height: 16),
+          _buildProductCard(context, ref, provider.searchResults.first),
+        ],
+      );
+    } else {
+      return _buildUnregisteredProduct(context, ref, provider);
+    }
   }
 
-  Widget _buildNoResults(BuildContext context) {
+  Widget _buildUnregisteredProduct(BuildContext context, WidgetRef ref, ImageSearchStateModel provider) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color: Colors.orange.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          color: Colors.orange.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
         children: [
           Icon(
-            Icons.search_off,
+            Icons.warning_amber_rounded,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            color: Colors.orange,
           ),
           const SizedBox(height: 16),
           Text(
-            'No Products Found',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            'Product Not Registered',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
+              color: Colors.orange,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'We couldn\'t find any matching products in our database. Try taking a clearer photo or check if the product is in our system.',
+            'This product was not found in our database. It may be unregistered or counterfeit.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          
+          // Detected information
+          if (provider.detectedProductName != null || provider.detectedBrandName != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Detected Information',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (provider.detectedProductName != null) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.label, size: 16, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text('Product: ${provider.detectedProductName}'),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  if (provider.detectedBrandName != null) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.business, size: 16, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text('Brand: ${provider.detectedBrandName}'),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          
+          // Report button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _navigateToReportForm(context, provider),
+              icon: const Icon(Icons.report),
+              label: const Text('Report This Product'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
           ),
         ],
       ),
@@ -505,6 +577,18 @@ class ImageSearchResultsScreen extends ConsumerWidget {
         content: Text('${product.displayName} saved to records'),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _navigateToReportForm(BuildContext context, ImageSearchStateModel provider) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ReportFormScreen(
+          imageFile: imageFile,
+          detectedProductName: provider.detectedProductName,
+          detectedBrandName: provider.detectedBrandName,
+        ),
       ),
     );
   }

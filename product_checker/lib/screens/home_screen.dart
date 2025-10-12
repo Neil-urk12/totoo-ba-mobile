@@ -17,7 +17,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             Text(
-              'Verify to check if this is true?',
+              'Is this true stone?',
               style: Theme.of(context).textTheme.displaySmall,
               textAlign: TextAlign.center,
             ),
