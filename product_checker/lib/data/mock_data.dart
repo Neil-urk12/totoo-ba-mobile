@@ -5,6 +5,7 @@ import '../models/cosmetic_industry.dart';
 import '../models/food_industry.dart';
 import '../models/medical_device_industry.dart';
 import '../models/drugs_new_applications.dart';
+import '../models/report.dart';
 
 class MockData {
   static List<DrugProduct> get savedDrugProducts => [
@@ -671,5 +672,80 @@ class MockData {
     'Pharmacologic Category (Z-A)',
     'Dosage Form (A-Z)',
     'Dosage Form (Z-A)',
+  ];
+
+  static List<Report> get savedReports => [
+    Report(
+      id: 'RPT-2024-001234',
+      productName: 'Acetaminophen 500mg',
+      brandName: 'MediRelief',
+      registrationNumber: 'DR-2024-001234',
+      description: 'Found this product in a local pharmacy but it\'s not registered in the official database.',
+      reporterName: 'Maria Santos',
+      reportDate: DateTime.now().subtract(const Duration(hours: 2)),
+      location: 'Quezon City, Metro Manila',
+      storeName: 'Mercury Drug Store - Cubao',
+    ),
+    Report(
+      id: 'RPT-2024-005678',
+      productName: 'Ascorbic Acid 1000mg',
+      brandName: 'VitaMax-C',
+      description: 'This product does not appear in the official database. The packaging looks suspicious.',
+      reporterName: null, // Anonymous report
+      reportDate: DateTime.now().subtract(const Duration(days: 1)),
+      location: 'Makati City, Metro Manila',
+      storeName: 'Watsons - Greenbelt',
+    ),
+    Report(
+      id: 'RPT-2024-009012',
+      productName: 'Ibuprofen 400mg',
+      brandName: 'PainEase',
+      description: 'The packaging quality is poor and the text appears blurry. The product may be counterfeit.',
+      reporterName: 'Juan Dela Cruz',
+      reportDate: DateTime.now().subtract(const Duration(days: 3)),
+      location: 'Pasig City, Metro Manila',
+      storeName: 'South Star Drug - Ortigas',
+    ),
+    Report(
+      id: 'RPT-2024-003456',
+      productName: 'Multivitamin Complex',
+      brandName: 'NutriVital',
+      description: 'Product is not found in the registration database. Still being sold in multiple stores.',
+      reporterName: 'Ana Rodriguez',
+      reportDate: DateTime.now().subtract(const Duration(days: 5)),
+      location: 'Manila, Metro Manila',
+      storeName: 'Generika Drugstore - Quiapo',
+    ),
+    Report(
+      id: 'RPT-2024-007890',
+      productName: 'Vitamin C 500mg',
+      brandName: 'C-Boost',
+      description: 'This product is not found in the official registration database.',
+      reporterName: null, // Anonymous report
+      reportDate: DateTime.now().subtract(const Duration(days: 7)),
+      location: 'Taguig City, Metro Manila',
+      storeName: 'Rose Pharmacy - BGC',
+    ),
+    Report(
+      id: 'RPT-2024-011234',
+      productName: 'Dextromethorphan Syrup',
+      brandName: 'CoughClear',
+      description: 'The liquid appears to have a different color and consistency compared to authentic products.',
+      reporterName: 'Carlos Mendoza',
+      reportDate: DateTime.now().subtract(const Duration(days: 10)),
+      location: 'Mandaluyong City, Metro Manila',
+      storeName: 'The Generics Pharmacy - SM Megamall',
+    ),
+  ];
+
+  static List<String> get reportSortOptions => [
+    'Report Date (Newest First)',
+    'Report Date (Oldest First)',
+    'Product Name (A-Z)',
+    'Product Name (Z-A)',
+    'Brand Name (A-Z)',
+    'Brand Name (Z-A)',
+    'Location (A-Z)',
+    'Location (Z-A)',
   ];
 }
