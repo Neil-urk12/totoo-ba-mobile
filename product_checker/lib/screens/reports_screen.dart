@@ -280,7 +280,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         initialChildSize: 0.7,
         maxChildSize: 0.9,
         minChildSize: 0.5,
-        builder: (context, scrollController) {
+        builder: (context, dragScrollController) {
+          // Create a separate scroll controller for the content
+          final contentScrollController = ScrollController();
+          
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
@@ -323,65 +326,67 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 // Content
                 Expanded(
                   child: SingleChildScrollView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Product Info
-                        _buildDetailSection(
-                          'Product Information',
-                          [
-                            _buildDetailRow('Product Name', report.productName),
-                            if (report.brandName != null)
-                              _buildDetailRow('Brand Name', report.brandName!),
-                            if (report.registrationNumber != null)
-                              _buildDetailRow('Registration Number', report.registrationNumber!),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Report Info
-                        _buildDetailSection(
-                          'Report Information',
-                          [
-                            _buildDetailRow('Reported By', report.reporterDisplay),
-                            _buildDetailRow('Report Date', controller.formatDate(report.reportDate)),
-                            _buildDetailRow('Time Since Report', report.timeSinceReport),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Location Info
-                        if (report.location != null || report.storeName != null)
+                    controller: contentScrollController,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product Info
                           _buildDetailSection(
-                            'Location Information',
+                            'Product Information',
                             [
-                              if (report.storeName != null)
-                                _buildDetailRow('Store Name', report.storeName!),
-                              if (report.location != null)
-                                _buildDetailRow('Location', report.location!),
+                              _buildDetailRow('Product Name', report.productName),
+                              if (report.brandName != null)
+                                _buildDetailRow('Brand Name', report.brandName!),
+                              if (report.registrationNumber != null)
+                                _buildDetailRow('Registration Number', report.registrationNumber!),
                             ],
                           ),
 
-                        if (report.location != null || report.storeName != null)
                           const SizedBox(height: 20),
 
-                        // Description
-                        _buildDetailSection(
-                          'Description',
-                          [
-                            Text(
-                              report.description,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
-                        ),
+                          // Report Info
+                          _buildDetailSection(
+                            'Report Information',
+                            [
+                              _buildDetailRow('Reported By', report.reporterDisplay),
+                              _buildDetailRow('Report Date', controller.formatDate(report.reportDate)),
+                              _buildDetailRow('Time Since Report', report.timeSinceReport),
+                            ],
+                          ),
 
-                        const SizedBox(height: 20),
-                      ],
+                          const SizedBox(height: 20),
+
+                          // Location Info
+                          if (report.location != null || report.storeName != null)
+                            _buildDetailSection(
+                              'Location Information',
+                              [
+                                if (report.storeName != null)
+                                  _buildDetailRow('Store Name', report.storeName!),
+                                if (report.location != null)
+                                  _buildDetailRow('Location', report.location!),
+                              ],
+                            ),
+
+                          if (report.location != null || report.storeName != null)
+                            const SizedBox(height: 20),
+
+                          // Description
+                          _buildDetailSection(
+                            'Description',
+                            [
+                              Text(
+                                report.description,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
                 ),

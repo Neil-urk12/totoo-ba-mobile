@@ -459,91 +459,169 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
         initialChildSize: 0.7,
         maxChildSize: 0.9,
         minChildSize: 0.5,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
+        builder: (context, dragScrollController) {
+          // Create a separate scroll controller for the content
+          final contentScrollController = ScrollController();
+          
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Handle bar
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 20),
-                
-                // Title
-                Text(
-                  'Drug Product Details',
-                  style: Theme.of(context).textTheme.headlineSmall,
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Drug Product Details',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
-                
-                // Details
+
+                // Content
                 Expanded(
                   child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDetailRow('Generic Name', product.genericName),
-                        _buildDetailRow('Brand Name', product.brandName),
-                        _buildDetailRow('Registration Number', product.registrationNumber),
-                        _buildDetailRow('Dosage Strength', product.dosageStrength),
-                        _buildDetailRow('Dosage Form', product.dosageForm),
-                        _buildDetailRow('Classification', product.classification),
-                        _buildDetailRow('Pharmacologic Category', product.pharmacologicCategory),
-                        _buildDetailRow('Manufacturer', product.manufacturer),
-                        _buildDetailRow('Country of Origin', product.countryOfOrigin),
-                        _buildDetailRow('Application Type', product.applicationType),
-                        _buildDetailRow('Issuance Date', 
-                            '${product.issuanceDate.day}/${product.issuanceDate.month}/${product.issuanceDate.year}'),
-                        _buildDetailRow('Expiry Date', 
-                            '${product.expiryDate.day}/${product.expiryDate.month}/${product.expiryDate.year}'),
-                        _buildDetailRow('Status', product.status),
-                        _buildDetailRow('Days Until Expiry', '${product.daysUntilExpiry} days'),
-                      ],
+                    controller: contentScrollController,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product Information
+                          _buildDetailSection(
+                            'Product Information',
+                            [
+                              _buildDetailRow('Generic Name', product.genericName),
+                              _buildDetailRow('Brand Name', product.brandName),
+                              _buildDetailRow('Registration Number', product.registrationNumber),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Dosage Information
+                          _buildDetailSection(
+                            'Dosage Information',
+                            [
+                              _buildDetailRow('Dosage Strength', product.dosageStrength),
+                              _buildDetailRow('Dosage Form', product.dosageForm),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Classification Information
+                          _buildDetailSection(
+                            'Classification Information',
+                            [
+                              _buildDetailRow('Classification', product.classification),
+                              _buildDetailRow('Pharmacologic Category', product.pharmacologicCategory),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Manufacturer Information
+                          _buildDetailSection(
+                            'Manufacturer Information',
+                            [
+                              _buildDetailRow('Manufacturer', product.manufacturer),
+                              _buildDetailRow('Country of Origin', product.countryOfOrigin),
+                              _buildDetailRow('Application Type', product.applicationType),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Status Information
+                          _buildDetailSection(
+                            'Status Information',
+                            [
+                              _buildDetailRow('Status', product.status),
+                              _buildDetailRow('Issuance Date', 
+                                  '${product.issuanceDate.day}/${product.issuanceDate.month}/${product.issuanceDate.year}'),
+                              _buildDetailRow('Expiry Date', 
+                                  '${product.expiryDate.day}/${product.expiryDate.month}/${product.expiryDate.year}'),
+                              _buildDetailRow('Days Until Expiry', '${product.daysUntilExpiry} days'),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetailSection(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
-      ),
+        const SizedBox(height: 12),
+        ...children,
+      ],
     );
   }
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w500,
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodyLarge,
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
         ],
       ),
