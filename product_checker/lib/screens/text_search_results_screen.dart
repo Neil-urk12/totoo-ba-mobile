@@ -1,0 +1,605 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/drug_product.dart';
+import '../providers/text_search_provider.dart';
+import '../providers/saved_records_provider.dart';
+import 'report_form_screen.dart';
+
+class TextSearchResultsScreen extends ConsumerWidget {
+  final String searchQuery;
+  
+  const TextSearchResultsScreen({
+    super.key,
+    required this.searchQuery,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = ref.watch(textSearchProvider);
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Search Results'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Navigate back to home screen
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
+        ),
+      ),
+      body: provider.searchResults.isEmpty && !provider.isCompleted 
+        ? _buildLoadingState(context) 
+        : _buildResultsState(context, ref, provider),
+    );
+  }
+
+  Widget _buildLoadingState(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Loading results...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsState(BuildContext context, WidgetRef ref, TextSearchStateModel provider) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Search summary
+          _buildSearchSummary(context, provider),
+          const SizedBox(height: 24),
+          
+          // Search query display
+          _buildSearchQueryDisplay(context),
+          const SizedBox(height: 24),
+          
+          // Results section
+          _buildResultsSection(context, ref, provider),
+          const SizedBox(height: 24),
+          
+          // Action buttons
+          _buildActionButtons(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchSummary(BuildContext context, TextSearchStateModel provider) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: provider.isProductRegistered 
+          ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: provider.isProductRegistered 
+            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+            : Colors.orange.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                provider.isProductRegistered ? Icons.check_circle : Icons.warning,
+                color: provider.isProductRegistered 
+                  ? Theme.of(context).colorScheme.primary 
+                  : Colors.orange,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  provider.isProductRegistered ? 'Product Verified' : 'Product Not Found',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: provider.isProductRegistered 
+                      ? Theme.of(context).colorScheme.primary 
+                      : Colors.orange,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            provider.isProductRegistered 
+              ? 'This product is registered and verified in our database'
+              : 'This product was not found in our database',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchQueryDisplay(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.search,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Search Query',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            searchQuery,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsSection(BuildContext context, WidgetRef ref, TextSearchStateModel provider) {
+    if (provider.isProductRegistered && provider.searchResults.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Product Details',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildProductCard(context, ref, provider.searchResults.first),
+        ],
+      );
+    } else {
+      return _buildUnregisteredProduct(context, ref, provider);
+    }
+  }
+
+  Widget _buildUnregisteredProduct(BuildContext context, WidgetRef ref, TextSearchStateModel provider) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 64,
+            color: Colors.orange,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Product Not Registered',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.orange,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This product was not found in our database. It may be unregistered or counterfeit.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          
+          // Detected information
+          if (provider.detectedProductName != null || provider.detectedBrandName != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Detected Information',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (provider.detectedProductName != null) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.label, size: 16, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text('Product: ${provider.detectedProductName}'),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  if (provider.detectedBrandName != null) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.business, size: 16, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text('Brand: ${provider.detectedBrandName}'),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          
+          // Report button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _navigateToReportForm(context, provider),
+              icon: const Icon(Icons.report),
+              label: const Text('Report This Product'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductCard(BuildContext context, WidgetRef ref, DrugProduct product) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.displayName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      product.manufacturer,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildVerificationBadge(context, product.status == 'Active'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildInfoChip(context, 'Reg: ${product.registrationNumber}'),
+              const SizedBox(width: 8),
+              _buildInfoChip(context, 'Exp: ${product.expiryDate.year}-${product.expiryDate.month.toString().padLeft(2, '0')}-${product.expiryDate.day.toString().padLeft(2, '0')}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _showProductDetails(context, product),
+                  child: const Text('View Details'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _saveProduct(context, ref, product),
+                  child: const Text('Save Record'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationBadge(BuildContext context, bool isVerified) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isVerified ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isVerified ? Colors.green : Colors.orange,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isVerified ? Icons.verified : Icons.warning,
+            size: 14,
+            color: isVerified ? Colors.green : Colors.orange,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isVerified ? 'Verified' : 'Unverified',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isVerified ? Colors.green : Colors.orange,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(BuildContext context, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () {
+              // Navigate back to home screen
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            icon: const Icon(Icons.search),
+            label: const Text('Search Another Product'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            icon: const Icon(Icons.home),
+            label: const Text('Back to Home'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showProductDetails(BuildContext context, DrugProduct product) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        builder: (context, dragScrollController) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Product Details',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: dragScrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Product Name
+                        Text(
+                          product.displayName,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          product.manufacturer,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Details
+                        _buildDetailRow('Registration Number', product.registrationNumber),
+                        _buildDetailRow('Dosage Strength', product.dosageStrength),
+                        _buildDetailRow('Dosage Form', product.dosageForm),
+                        _buildDetailRow('Classification', product.classification),
+                        _buildDetailRow('Pharmacologic Category', product.pharmacologicCategory),
+                        _buildDetailRow('Country of Origin', product.countryOfOrigin),
+                        _buildDetailRow('Application Type', product.applicationType),
+                        _buildDetailRow('Issuance Date', '${product.issuanceDate.day}/${product.issuanceDate.month}/${product.issuanceDate.year}'),
+                        _buildDetailRow('Expiry Date', '${product.expiryDate.day}/${product.expiryDate.month}/${product.expiryDate.year}'),
+                        _buildDetailRow('Status', product.status),
+                        _buildDetailRow('Days Until Expiry', '${product.daysUntilExpiry} days'),
+                        
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _saveProduct(BuildContext context, WidgetRef ref, DrugProduct product) {
+    // Add to saved records
+    ref.read(savedRecordsProvider.notifier).addRecord(product);
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.displayName} saved to records'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _navigateToReportForm(BuildContext context, TextSearchStateModel provider) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ReportFormScreen(
+          imageFile: null, // No image for text search
+          detectedProductName: provider.detectedProductName,
+          detectedBrandName: provider.detectedBrandName,
+        ),
+      ),
+    );
+  }
+}

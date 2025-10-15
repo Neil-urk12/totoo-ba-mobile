@@ -1,10 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/action_button_widget.dart';
 import 'image_search_screen.dart';
+import 'text_processing_screen.dart';
+import '../providers/text_search_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  String _searchQuery = '';
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reset text search provider state when entering this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(textSearchProvider.notifier).reset();
+      }
+    });
+  }
+
+  void _handleSearch(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+    
+    if (query.trim().isNotEmpty) {
+      // Reset the provider state before navigation
+      ref.read(textSearchProvider.notifier).reset();
+      
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => TextProcessingScreen(
+            searchQuery: query.trim(),
+          ),
+        ),
+      ).then((_) {
+        // Reset state again when returning from processing screen
+        if (mounted) {
+          ref.read(textSearchProvider.notifier).reset();
+        }
+      });
+    }
+  }
+
+  void _handleVerifyProduct() {
+    if (_searchQuery.trim().isEmpty) {
+      setState(() {
+        _errorText = 'Please enter a product name, brand, or registration number';
+      });
+      return;
+    }
+    
+    // Clear any existing error
+    setState(() {
+      _errorText = null;
+    });
+    
+    // Reset the provider state before navigation
+    ref.read(textSearchProvider.notifier).reset();
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TextProcessingScreen(
+          searchQuery: _searchQuery.trim(),
+        ),
+      ),
+    ).then((_) {
+      // Reset state again when returning from processing screen
+      if (mounted) {
+        ref.read(textSearchProvider.notifier).reset();
+      }
+    });
+  }
+
+  void _handleTextChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _errorText = null; // Clear error when user types
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +114,11 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
             // Search Bar Widget
-            const SearchBarWidget(),
+            SearchBarWidget(
+              onSearch: _handleSearch,
+              onTextChanged: _handleTextChanged,
+              errorText: _errorText,
+            ),
             const SizedBox(height: 20),
             // Verify Product Button
             ActionButtonWidget(
@@ -40,8 +127,7 @@ class HomeScreen extends StatelessWidget {
               backgroundColor: Theme.of(context).colorScheme.primary,
               textColor: Theme.of(context).colorScheme.onPrimary,
               iconColor: Theme.of(context).colorScheme.onPrimary,
-              onPressed: () { 
-              },
+              onPressed: _handleVerifyProduct,
             ),
             const SizedBox(height: 10),
             // Search by Image Button
