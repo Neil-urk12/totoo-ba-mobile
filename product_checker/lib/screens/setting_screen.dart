@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
+import 'about_screen.dart';
 
 class SettingScreen extends ConsumerWidget {
   const SettingScreen({super.key});
@@ -79,6 +80,24 @@ class SettingScreen extends ConsumerWidget {
               ),
             ),
           ],
+          
+          // About Section (always visible)
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('About'),
+              subtitle: const Text('Learn more about this app'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AboutScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
