@@ -51,36 +51,6 @@ class SettingScreen extends ConsumerWidget {
             ),
           ),
           
-          // Account Settings Card (only show if authenticated)
-          if (authState.isAuthenticated) ...[
-            const SizedBox(height: 16),
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.account_circle_outlined),
-                    title: const Text('Account'),
-                    subtitle: const Text('Manage your account settings'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      // Navigate to account settings if needed
-                    },
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text('Sign Out'),
-                    subtitle: const Text('Sign out of your account'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      _showLogoutDialog(context, ref);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-          
           // About Section (always visible)
           const SizedBox(height: 16),
           Card(
@@ -98,6 +68,22 @@ class SettingScreen extends ConsumerWidget {
               },
             ),
           ),
+          
+          // Sign Out Section (only show if authenticated)
+          if (authState.isAuthenticated) ...[
+            const SizedBox(height: 16),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Sign Out'),
+                subtitle: const Text('Sign out of your account'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  _showLogoutDialog(context, ref);
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
