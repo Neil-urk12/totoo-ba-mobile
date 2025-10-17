@@ -16,21 +16,31 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const SavedScreen(),
-    const ReportsScreen(),
-    const ProfileScreen(),
-    const SettingScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      const HomeScreen(),
+      const SavedScreen(),
+      const ReportsScreen(),
+      const ProfileScreen(),
+      SettingScreen(
+        onNavigateToProfile: () {
+          setState(() {
+            _currentIndex = 3;
+          });
+        },
+      ),
+    ];
+  }
 
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
     });
     
-    // Trigger reset when navigating to saved screen (index 1)
     if (index == 1) {
       ref.read(resetSavedScreenProvider.notifier).state = !ref.read(resetSavedScreenProvider);
     }

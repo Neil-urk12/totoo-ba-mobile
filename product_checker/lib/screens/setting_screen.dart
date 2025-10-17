@@ -5,7 +5,9 @@ import '../providers/auth_provider.dart';
 import 'about_screen.dart';
 
 class SettingScreen extends ConsumerWidget {
-  const SettingScreen({super.key});
+  final VoidCallback? onNavigateToProfile;
+  
+  const SettingScreen({super.key, this.onNavigateToProfile});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,8 +104,15 @@ class SettingScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); 
               ref.read(authProvider.notifier).logout();
+              onNavigateToProfile?.call();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Successfully signed out!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,

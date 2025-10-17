@@ -184,7 +184,7 @@ class AboutScreen extends StatelessWidget {
                       context,
                       icon: Icons.search,
                       title: 'Product Search',
-                      description: 'Search for products by name or barcode',
+                      description: 'Search for products by name or ID',
                     ),
                     const SizedBox(height: 16),
                     _buildFeatureItem(
