@@ -9,6 +9,14 @@ enum TextSearchState {
   error,
 }
 
+enum TextSearchResult {
+  verified,           // Product found and verified
+  notFound,          // Product not found in database (can be reported)
+  invalidQuery,      // Search query is invalid or too short
+  apiError,          // API/Network error
+  unknown,           // Unknown result
+}
+
 class TextSearchStateModel {
   final TextSearchState state;
   final String searchQuery;
@@ -19,6 +27,8 @@ class TextSearchStateModel {
   final bool isProductRegistered;
   final String? detectedProductName;
   final String? detectedBrandName;
+  final TextSearchResult searchResult;
+  final String? resultMessage;
 
   const TextSearchStateModel({
     this.state = TextSearchState.idle,
@@ -30,6 +40,8 @@ class TextSearchStateModel {
     this.isProductRegistered = false,
     this.detectedProductName,
     this.detectedBrandName,
+    this.searchResult = TextSearchResult.unknown,
+    this.resultMessage,
   });
 
   TextSearchStateModel copyWith({
@@ -42,6 +54,8 @@ class TextSearchStateModel {
     bool? isProductRegistered,
     String? detectedProductName,
     String? detectedBrandName,
+    TextSearchResult? searchResult,
+    String? resultMessage,
   }) {
     return TextSearchStateModel(
       state: state ?? this.state,
@@ -53,6 +67,8 @@ class TextSearchStateModel {
       isProductRegistered: isProductRegistered ?? this.isProductRegistered,
       detectedProductName: detectedProductName ?? this.detectedProductName,
       detectedBrandName: detectedBrandName ?? this.detectedBrandName,
+      searchResult: searchResult ?? this.searchResult,
+      resultMessage: resultMessage ?? this.resultMessage,
     );
   }
 
@@ -62,6 +78,13 @@ class TextSearchStateModel {
   bool get isProcessing => state == TextSearchState.processing;
   bool get isCompleted => state == TextSearchState.completed;
   bool get hasError => state == TextSearchState.error;
+  
+  // Result state getters
+  bool get isVerified => searchResult == TextSearchResult.verified;
+  bool get isNotFound => searchResult == TextSearchResult.notFound;
+  bool get isInvalidQuery => searchResult == TextSearchResult.invalidQuery;
+  bool get isApiError => searchResult == TextSearchResult.apiError;
+  bool get isUnknownResult => searchResult == TextSearchResult.unknown;
 }
 
 class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {

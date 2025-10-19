@@ -17,7 +17,6 @@ class ImageProcessingScreen extends ConsumerStatefulWidget {
 }
 
 class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -38,7 +37,9 @@ class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
     notifier.processImage().then((_) {
       if (mounted) {
         final state = ref.read(imageSearchProvider);
-        if (state.isCompleted) {
+        
+        // Navigate to results screen for both completed and error states
+        if (state.isCompleted || state.hasError) {
           // Add a small delay to ensure state is fully updated
           Future.delayed(const Duration(milliseconds: 100), () {
             if (mounted) {
@@ -53,6 +54,21 @@ class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
           });
         }
       }
+    }).catchError((error) {
+      if (mounted) {
+        // Navigate to results screen even if there's an unexpected error
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => ImageSearchResultsScreen(
+                  imageFile: widget.imageFile,
+                ),
+              ),
+            );
+          }
+        });
+      }
     });
   }
 
@@ -62,7 +78,7 @@ class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
       builder: (context, ref, child) {
         final provider = ref.watch(imageSearchProvider);
         
-        // Start processing if not already started
+        // Start processing if idle
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (provider.isIdle) {
             _startProcessing(ref);

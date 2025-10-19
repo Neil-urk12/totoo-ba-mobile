@@ -16,12 +16,8 @@ class _ImageSearchScreenState extends ConsumerState<ImageSearchScreen> {
   @override
   void initState() {
     super.initState();
-    // Reset provider state when entering this screen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(imageSearchProvider.notifier).reset();
-      }
-    });
+    // Don't reset state automatically - let the user control it
+    // The state will be reset when user explicitly navigates back to this screen
   }
 
   @override
