@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/drug_product.dart';
+import '../models/generic_product.dart';
 import '../providers/text_search_provider.dart';
-import '../providers/saved_records_provider.dart';
+import '../widgets/generic_product_card.dart';
 import 'report_form_screen.dart';
 
 class TextSearchResultsScreen extends ConsumerWidget {
   final String searchQuery;
+  final bool skipLoadingState;
   
   const TextSearchResultsScreen({
     super.key,
     required this.searchQuery,
+    this.skipLoadingState = false,
   });
 
   @override
@@ -30,7 +32,8 @@ class TextSearchResultsScreen extends ConsumerWidget {
           },
         ),
       ),
-      body: provider.searchResults.isEmpty && !provider.isCompleted 
+      body: (!skipLoadingState && provider.searchResults.isEmpty && !provider.isCompleted) ||
+             (skipLoadingState && provider.searchResult == TextSearchResult.unknown)
         ? _buildLoadingState(context) 
         : _buildResultsState(context, ref, provider),
     );
@@ -75,18 +78,65 @@ class TextSearchResultsScreen extends ConsumerWidget {
   }
 
   Widget _buildSearchSummary(BuildContext context, TextSearchStateModel provider) {
+    // Determine color scheme based on search result
+    Color statusColor;
+    Color backgroundColor;
+    Color borderColor;
+    IconData statusIcon;
+    String statusText;
+    String statusDescription;
+
+    switch (provider.searchResult) {
+      case TextSearchResult.verified:
+        statusColor = Colors.green;
+        backgroundColor = Colors.green.withValues(alpha: 0.1);
+        borderColor = Colors.green.withValues(alpha: 0.3);
+        statusIcon = Icons.check_circle;
+        statusText = 'Product Verified';
+        statusDescription = 'This product is registered and verified in our database';
+        break;
+      case TextSearchResult.notFound:
+        statusColor = Colors.orange;
+        backgroundColor = Colors.orange.withValues(alpha: 0.1);
+        borderColor = Colors.orange.withValues(alpha: 0.3);
+        statusIcon = Icons.warning;
+        statusText = 'Product Not Found';
+        statusDescription = 'This product was not found in our database';
+        break;
+      case TextSearchResult.invalidQuery:
+        statusColor = Colors.yellow;
+        backgroundColor = Colors.yellow.withValues(alpha: 0.1);
+        borderColor = Colors.yellow.withValues(alpha: 0.3);
+        statusIcon = Icons.info;
+        statusText = 'Invalid Search Query';
+        statusDescription = 'Please provide a more specific search term';
+        break;
+      case TextSearchResult.apiError:
+        statusColor = Colors.red;
+        backgroundColor = Colors.red.withValues(alpha: 0.1);
+        borderColor = Colors.red.withValues(alpha: 0.3);
+        statusIcon = Icons.error;
+        statusText = 'Search Error';
+        statusDescription = 'Unable to search the database at this time';
+        break;
+      case TextSearchResult.unknown:
+        statusColor = Colors.grey;
+        backgroundColor = Colors.grey.withValues(alpha: 0.1);
+        borderColor = Colors.grey.withValues(alpha: 0.3);
+        statusIcon = Icons.help;
+        statusText = 'Unknown Status';
+        statusDescription = 'Unable to determine product status';
+        break;
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: provider.isProductRegistered 
-          ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-          : Colors.orange.withValues(alpha: 0.1),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: provider.isProductRegistered 
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-            : Colors.orange.withValues(alpha: 0.3),
+          color: borderColor,
         ),
       ),
       child: Column(
@@ -95,21 +145,17 @@ class TextSearchResultsScreen extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                provider.isProductRegistered ? Icons.check_circle : Icons.warning,
-                color: provider.isProductRegistered 
-                  ? Theme.of(context).colorScheme.primary 
-                  : Colors.orange,
+                statusIcon,
+                color: statusColor,
                 size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  provider.isProductRegistered ? 'Product Verified' : 'Product Not Found',
+                  statusText,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: provider.isProductRegistered 
-                      ? Theme.of(context).colorScheme.primary 
-                      : Colors.orange,
+                    color: statusColor,
                   ),
                 ),
               ),
@@ -117,13 +163,22 @@ class TextSearchResultsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            provider.isProductRegistered 
-              ? 'This product is registered and verified in our database'
-              : 'This product was not found in our database',
+            statusDescription,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
+          // Show result count if we have results
+          if (provider.searchResults.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Found ${provider.searchResults.length} matching product${provider.searchResults.length == 1 ? '' : 's'}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: statusColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -155,15 +210,16 @@ class TextSearchResultsScreen extends ConsumerWidget {
                 'Search Query',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             searchQuery,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -177,13 +233,51 @@ class TextSearchResultsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Product Details',
+            'Search Results',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          _buildProductCard(context, ref, provider.searchResults.first),
+          
+          // Main product card
+          GenericProductCard(
+            product: provider.searchResults.first,
+            onTap: () => _showProductDetails(context, provider.searchResults.first),
+          ),
+          
+          // Show additional results if available
+          if (provider.searchResults.length > 1) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Additional Matches',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 280, // Increased height from 200 to 280
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: provider.searchResults.length - 1,
+                itemBuilder: (context, index) {
+                  final product = provider.searchResults[index + 1];
+                  return Container(
+                    width: 280,
+                    margin: EdgeInsets.only(
+                      right: index < provider.searchResults.length - 2 ? 8 : 0, // Reduced spacing between cards
+                      left: index == 0 ? 0 : 4, // Small left margin for non-first items
+                    ),
+                    child: GenericProductCard(
+                      product: product,
+                      onTap: () => _showProductDetails(context, product),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ],
       );
     } else {
@@ -206,12 +300,12 @@ class TextSearchResultsScreen extends ConsumerWidget {
         children: [
           Icon(
             Icons.warning_amber_rounded,
-            size: 64,
+            size: 48,
             color: Colors.orange,
           ),
           const SizedBox(height: 16),
           Text(
-            'Product Not Registered',
+            'Product Not Found',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.orange,
@@ -219,65 +313,19 @@ class TextSearchResultsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'This product was not found in our database. It may be unregistered or counterfeit.',
+            'This product was not found in our database. You can report it to help us improve our records.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          
-          // Detected information
-          if (provider.detectedProductName != null || provider.detectedBrandName != null) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Detected Information',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (provider.detectedProductName != null) ...[
-                    Row(
-                      children: [
-                        Icon(Icons.label, size: 16, color: Theme.of(context).colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Text('Product: ${provider.detectedProductName}'),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                  if (provider.detectedBrandName != null) ...[
-                    Row(
-                      children: [
-                        Icon(Icons.business, size: 16, color: Theme.of(context).colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Text('Brand: ${provider.detectedBrandName}'),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-          
-          // Report button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () => _navigateToReportForm(context, provider),
               icon: const Icon(Icons.report),
-              label: const Text('Report This Product'),
+              label: const Text('Report Product'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
@@ -290,154 +338,14 @@ class TextSearchResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProductCard(BuildContext context, WidgetRef ref, DrugProduct product) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.displayName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      product.manufacturer,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildVerificationBadge(context, product.status == 'Active'),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildInfoChip(context, 'Reg: ${product.registrationNumber}'),
-              const SizedBox(width: 8),
-              _buildInfoChip(context, 'Exp: ${product.expiryDate.year}-${product.expiryDate.month.toString().padLeft(2, '0')}-${product.expiryDate.day.toString().padLeft(2, '0')}'),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _showProductDetails(context, product),
-                  child: const Text('View Details'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => _saveProduct(context, ref, product),
-                  child: const Text('Save Record'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerificationBadge(BuildContext context, bool isVerified) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isVerified ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isVerified ? Colors.green : Colors.orange,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isVerified ? Icons.verified : Icons.warning,
-            size: 14,
-            color: isVerified ? Colors.green : Colors.orange,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            isVerified ? 'Verified' : 'Unverified',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isVerified ? Colors.green : Colors.orange,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(BuildContext context, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              // Navigate back to home screen
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            icon: const Icon(Icons.search),
-            label: const Text('Search Another Product'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () {
+              // Navigate back to home screen
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
             icon: const Icon(Icons.home),
@@ -451,7 +359,7 @@ class TextSearchResultsScreen extends ConsumerWidget {
     );
   }
 
-  void _showProductDetails(BuildContext context, DrugProduct product) {
+  void _showProductDetails(BuildContext context, GenericProduct product) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -461,6 +369,9 @@ class TextSearchResultsScreen extends ConsumerWidget {
         maxChildSize: 0.9,
         minChildSize: 0.5,
         builder: (context, dragScrollController) {
+          // Create a separate scroll controller for the content
+          final contentScrollController = ScrollController();
+          
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
@@ -470,14 +381,15 @@ class TextSearchResultsScreen extends ConsumerWidget {
               children: [
                 // Handle bar
                 Container(
-                  margin: const EdgeInsets.only(top: 8),
+                  margin: const EdgeInsets.only(top: 12),
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
+
                 // Header
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -485,58 +397,117 @@ class TextSearchResultsScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Product Details',
+                          '${product.productTypeDisplay} Details',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.close),
                       ),
                     ],
                   ),
                 ),
+
                 // Content
                 Expanded(
                   child: SingleChildScrollView(
-                    controller: dragScrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Product Name
-                        Text(
-                          product.displayName,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                    controller: contentScrollController,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product Information
+                          _buildDetailSection(
+                            context,
+                            'Product Information',
+                            [
+                              _buildDetailRow(context, 'Product Name', product.displayName),
+                              if (product.brandName != null && product.brandName!.isNotEmpty)
+                                _buildDetailRow(context, 'Brand Name', product.brandName!),
+                              if (product.genericName != null && product.genericName!.isNotEmpty)
+                                _buildDetailRow(context, 'Generic Name', product.genericName!),
+                              if (product.registrationNumber != null && product.registrationNumber!.isNotEmpty)
+                                _buildDetailRow(context, 'Registration Number', product.registrationNumber!),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          product.manufacturer,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+
+                          const SizedBox(height: 20),
+
+                          // Dosage Information (for drugs)
+                          if (product.productType == 'drug' && 
+                              (product.dosageStrength != null || product.dosageForm != null))
+                            _buildDetailSection(
+                              context,
+                              'Dosage Information',
+                              [
+                                if (product.dosageStrength != null && product.dosageStrength!.isNotEmpty)
+                                  _buildDetailRow(context, 'Dosage Strength', product.dosageStrength!),
+                                if (product.dosageForm != null && product.dosageForm!.isNotEmpty)
+                                  _buildDetailRow(context, 'Dosage Form', product.dosageForm!),
+                              ],
+                            ),
+
+                          if (product.productType == 'drug' && 
+                              (product.dosageStrength != null || product.dosageForm != null))
+                            const SizedBox(height: 20),
+
+                          // Classification Information
+                          if (product.classification != null || product.pharmacologicCategory != null)
+                            _buildDetailSection(
+                              context,
+                              'Classification Information',
+                              [
+                                if (product.classification != null && product.classification!.isNotEmpty)
+                                  _buildDetailRow(context, 'Classification', product.classification!),
+                                if (product.pharmacologicCategory != null && product.pharmacologicCategory!.isNotEmpty)
+                                  _buildDetailRow(context, 'Pharmacologic Category', product.pharmacologicCategory!),
+                              ],
+                            ),
+
+                          if (product.classification != null || product.pharmacologicCategory != null)
+                            const SizedBox(height: 20),
+
+                          // Manufacturer Information
+                          _buildDetailSection(
+                            context,
+                            'Manufacturer Information',
+                            [
+                              if (product.manufacturer != null && product.manufacturer!.isNotEmpty)
+                                _buildDetailRow(context, 'Manufacturer', product.manufacturer!),
+                              if (product.countryOfOrigin != null && product.countryOfOrigin!.isNotEmpty)
+                                _buildDetailRow(context, 'Country of Origin', product.countryOfOrigin!),
+                              if (product.applicationType != null && product.applicationType!.isNotEmpty)
+                                _buildDetailRow(context, 'Application Type', product.applicationType!),
+                              if (product.applicantCompany != null && product.applicantCompany!.isNotEmpty)
+                                _buildDetailRow(context, 'Applicant Company', product.applicantCompany!),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Details
-                        _buildDetailRow('Registration Number', product.registrationNumber),
-                        _buildDetailRow('Dosage Strength', product.dosageStrength),
-                        _buildDetailRow('Dosage Form', product.dosageForm),
-                        _buildDetailRow('Classification', product.classification),
-                        _buildDetailRow('Pharmacologic Category', product.pharmacologicCategory),
-                        _buildDetailRow('Country of Origin', product.countryOfOrigin),
-                        _buildDetailRow('Application Type', product.applicationType),
-                        _buildDetailRow('Issuance Date', '${product.issuanceDate.day}/${product.issuanceDate.month}/${product.issuanceDate.year}'),
-                        _buildDetailRow('Expiry Date', '${product.expiryDate.day}/${product.expiryDate.month}/${product.expiryDate.year}'),
-                        _buildDetailRow('Status', product.status),
-                        _buildDetailRow('Days Until Expiry', '${product.daysUntilExpiry} days'),
-                        
-                        const SizedBox(height: 20),
-                      ],
+
+                          const SizedBox(height: 20),
+
+                          // Additional Information
+                          _buildDetailSection(
+                            context,
+                            'Additional Information',
+                            [
+                              if (product.licenseNumber != null && product.licenseNumber!.isNotEmpty)
+                                _buildDetailRow(context, 'License Number', product.licenseNumber!),
+                              if (product.documentTrackingNumber != null && product.documentTrackingNumber!.isNotEmpty)
+                                _buildDetailRow(context, 'Document Tracking Number', product.documentTrackingNumber!),
+                              if (product.packaging != null && product.packaging!.isNotEmpty)
+                                _buildDetailRow(context, 'Packaging', product.packaging!),
+                              if (product.confidence != null)
+                                _buildDetailRow(context, 'Confidence', '${(product.confidence! * 100).round()}%'),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -548,45 +519,46 @@ class TextSearchResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailSection(BuildContext context, String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 120,
             child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
+              '$label:',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 14,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _saveProduct(BuildContext context, WidgetRef ref, DrugProduct product) {
-    // Add to saved records
-    ref.read(savedRecordsProvider.notifier).addRecord(product);
-    
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${product.displayName} saved to records'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
       ),
     );
   }

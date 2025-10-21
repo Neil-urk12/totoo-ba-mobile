@@ -20,9 +20,11 @@ class GenericProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
               // Header with product type and verification status
               Row(
                 children: [
@@ -145,6 +147,7 @@ class GenericProductCard extends StatelessWidget {
                 ),
               ],
             ],
+            ),
           ),
         ),
       ),

@@ -34,24 +34,8 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
     // Reset the provider state before starting processing
     notifier.reset();
     
-    notifier.searchProduct(widget.searchQuery).then((_) {
-      if (mounted) {
-        final state = ref.read(textSearchProvider);
-        if (state.isCompleted) {
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (mounted) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => TextSearchResultsScreen(
-                    searchQuery: widget.searchQuery,
-                  ),
-                ),
-              );
-            }
-          });
-        }
-      }
-    });
+    // Start the search - navigation will be handled by the build method listener
+    notifier.searchProduct(widget.searchQuery);
   }
 
   @override
@@ -66,10 +50,51 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
             _startProcessing(ref);
           }
         });
+        
+        // Listen for state changes and navigate when appropriate
+        ref.listen<TextSearchStateModel>(textSearchProvider, (previous, next) {
+          if (next.isCompleted && 
+              next.processingProgress >= 1.0 && 
+              next.currentProcessingMessage == 'Search completed successfully' &&
+              next.searchResult != TextSearchResult.unknown &&
+              next.searchResults.isNotEmpty &&
+              previous?.searchResult != next.searchResult) {
+            // Navigate when search is completed and results are fully processed
+            // Only navigate when the search result has actually changed from previous state
+            final navigator = Navigator.of(context);
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                navigator.pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => TextSearchResultsScreen(
+                      searchQuery: widget.searchQuery,
+                      skipLoadingState: true,
+                    ),
+                  ),
+                );
+              }
+            });
+          } else if (next.hasError && next.errorMessage.isNotEmpty) {
+            // Navigate when there's an error
+            final navigator = Navigator.of(context);
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                navigator.pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => TextSearchResultsScreen(
+                      searchQuery: widget.searchQuery,
+                      skipLoadingState: true,
+                    ),
+                  ),
+                );
+              }
+            });
+          }
+        });
         return Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -147,7 +172,7 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
                     duration: const Duration(milliseconds: 500),
                     child: Text(
                       provider.currentProcessingMessage,
-                      key: ValueKey(provider.currentProcessingMessage),
+                      key: ValueKey('${provider.currentProcessingMessage}_${provider.processingProgress}_${DateTime.now().millisecondsSinceEpoch}'),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -176,7 +201,7 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
                   
                   // Progress text
                   Text(
-                    '${(provider.processingProgress * 6).round()} of 6',
+                    '${(provider.processingProgress * 100).round()}%',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),

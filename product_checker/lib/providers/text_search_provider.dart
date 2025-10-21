@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/drug_product.dart';
-import '../data/mock_data.dart' as mock;
+import '../models/generic_product.dart';
+import '../services/text_verification_service.dart';
 
 enum TextSearchState {
   idle,
@@ -20,7 +20,7 @@ enum TextSearchResult {
 class TextSearchStateModel {
   final TextSearchState state;
   final String searchQuery;
-  final List<DrugProduct> searchResults;
+  final List<GenericProduct> searchResults;
   final String errorMessage;
   final String currentProcessingMessage;
   final double processingProgress;
@@ -47,7 +47,7 @@ class TextSearchStateModel {
   TextSearchStateModel copyWith({
     TextSearchState? state,
     String? searchQuery,
-    List<DrugProduct>? searchResults,
+    List<GenericProduct>? searchResults,
     String? errorMessage,
     String? currentProcessingMessage,
     double? processingProgress,
@@ -88,19 +88,6 @@ class TextSearchStateModel {
 }
 
 class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
-  // Processing messages
-  final List<String> _processingMessages = [
-    'Analyzing search query...',
-    'Searching product database...',
-    'Cross-referencing with FDA records...',
-    'Verifying product authenticity...',
-    'Generating detailed report...',
-    'Finalizing results...',
-  ];
-
-  // Static counter to track search attempts for alternating results
-  static int _searchCount = 0;
-
   TextSearchNotifier() : super(const TextSearchStateModel());
 
   Future<void> searchProduct(String query) async {
@@ -113,55 +100,41 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
       state: TextSearchState.processing,
       searchQuery: query.trim(),
       processingProgress: 0.0,
-      currentProcessingMessage: _processingMessages[0],
+      currentProcessingMessage: 'Starting search...',
     );
 
     try {
-      // Simulate processing with progress updates
-      for (int i = 0; i < _processingMessages.length; i++) {
-        if (state.state != TextSearchState.processing) break; // Check if cancelled
-        
-        state = state.copyWith(
-          currentProcessingMessage: _processingMessages[i],
-          processingProgress: (i + 1) / _processingMessages.length,
-        );
-        
-        // Wait between messages
-        await Future.delayed(const Duration(milliseconds: 800));
-      }
-
-      // Simulate API call for search results
-      await Future.delayed(const Duration(seconds: 1));
+      // Perform actual Supabase search with real progress reporting
+      final searchResults = await TextVerificationService.searchProducts(
+        query.trim(),
+        onProgress: (message, progress) {
+          // Update state with real progress from the service
+          state = state.copyWith(
+            currentProcessingMessage: message,
+            processingProgress: progress,
+          );
+        },
+      );
       
-      // Simulate text analysis
+      // Extract detected names from query
       final detectedProductName = _extractProductName(query);
       final detectedBrandName = _extractBrandName(query);
       
-      // Simple alternating pattern: first search = verified, second = unverified, third = verified, etc.
-      _searchCount++;
-      final isRegistered = _searchCount % 2 == 1; // Odd numbers = verified, even numbers = unverified
+      // Determine search result type
+      final searchResultType = _determineSearchResult(searchResults);
       
-      if (isRegistered) {
-        // Product is registered - return single matching product
-        final searchResults = mock.MockData.savedDrugProducts.take(1).toList();
-        
-        state = state.copyWith(
-          state: TextSearchState.completed,
-          searchResults: searchResults,
-          isProductRegistered: true,
-          detectedProductName: detectedProductName,
-          detectedBrandName: detectedBrandName,
-        );
-      } else {
-        // Product is not registered - no results
-        state = state.copyWith(
-          state: TextSearchState.completed,
-          searchResults: [],
-          isProductRegistered: false,
-          detectedProductName: detectedProductName,
-          detectedBrandName: detectedBrandName,
-        );
-      }
+      // Complete when search is actually done and results are ready
+      state = state.copyWith(
+        state: TextSearchState.completed,
+        searchResults: searchResults,
+        isProductRegistered: searchResults.isNotEmpty,
+        detectedProductName: detectedProductName,
+        detectedBrandName: detectedBrandName,
+        searchResult: searchResultType,
+        resultMessage: _getResultMessage(searchResultType, searchResults.length),
+        processingProgress: 1.0, // Ensure progress is at 100%
+        currentProcessingMessage: 'Search completed successfully',
+      );
     } catch (e) {
       _setError('Error searching product: $e');
     }
@@ -180,6 +153,45 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
     // Simple extraction logic - in real app, this would be more sophisticated
     final words = query.trim().split(' ');
     return words.isNotEmpty ? words[0] : 'Unknown Brand';
+  }
+
+  TextSearchResult _determineSearchResult(List<GenericProduct> results) {
+    if (results.isEmpty) {
+      return TextSearchResult.notFound;
+    }
+    
+    // Check if any results have high confidence
+    final highConfidenceResults = results.where((r) => (r.confidence ?? 0.0) > 0.7).toList();
+    if (highConfidenceResults.isNotEmpty) {
+      return TextSearchResult.verified;
+    }
+    
+    // Check if any results have medium confidence
+    final mediumConfidenceResults = results.where((r) => (r.confidence ?? 0.0) > 0.4).toList();
+    if (mediumConfidenceResults.isNotEmpty) {
+      return TextSearchResult.verified; // Still consider verified but with lower confidence
+    }
+    
+    return TextSearchResult.notFound;
+  }
+
+  String _getResultMessage(TextSearchResult resultType, int resultCount) {
+    switch (resultType) {
+      case TextSearchResult.verified:
+        if (resultCount == 1) {
+          return 'Product found and verified';
+        } else {
+          return 'Found $resultCount matching products';
+        }
+      case TextSearchResult.notFound:
+        return 'Product not found in database';
+      case TextSearchResult.invalidQuery:
+        return 'Please enter a valid search query';
+      case TextSearchResult.apiError:
+        return 'Search service temporarily unavailable';
+      case TextSearchResult.unknown:
+        return 'Search completed with unknown result';
+    }
   }
 
   // Utility methods
