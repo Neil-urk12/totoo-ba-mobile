@@ -612,13 +612,15 @@ class ImageSearchResultsScreen extends ConsumerWidget {
       ref.read(imageSearchProvider.notifier).setImage(imageFile);
       
       // Navigate back to processing screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => ImageProcessingScreen(
-            imageFile: imageFile,
+      if (context.mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ImageProcessingScreen(
+              imageFile: imageFile,
+            ),
           ),
-        ),
-      );
+        );
+      }
     });
   }
 
