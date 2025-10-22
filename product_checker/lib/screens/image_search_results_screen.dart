@@ -219,6 +219,7 @@ class ImageSearchResultsScreen extends ConsumerWidget {
           GenericProductCard(
             product: mainProduct,
             onTap: () => _showProductDetails(context, mainProduct),
+            searchType: 'image',
           ),
           
           // Alternative matches section
@@ -541,53 +542,52 @@ class ImageSearchResultsScreen extends ConsumerWidget {
     );
   }
 
-  void _saveProduct(BuildContext context, WidgetRef ref, GenericProduct product) {
-    // Convert to appropriate specific product type for saving
-    dynamic specificProduct;
-    
-    switch (product.productType) {
-      case 'drug':
-        specificProduct = product.toDrugProduct();
-        break;
-      case 'food':
-        specificProduct = product.toFoodProduct();
-        break;
-      case 'cosmetic':
-        specificProduct = product.toCosmeticIndustry();
-        break;
-      case 'food_industry':
-        specificProduct = product.toFoodIndustry();
-        break;
-      case 'medical_device':
-        specificProduct = product.toMedicalDeviceIndustry();
-        break;
-      case 'drug_application':
-        specificProduct = product.toDrugsNewApplications();
-        break;
-      default:
-        // For unknown types, we'll save the generic product data
+  Future<void> _saveProduct(BuildContext context, WidgetRef ref, GenericProduct product) async {
+    try {
+      // Get the saved records provider
+      final savedRecordsNotifier = ref.read(savedRecordsProvider.notifier);
+      
+      // Use a default user ID for now (in a real app, this would come from auth)
+      const userId = 'default_user';
+      
+      // Save the product using the saved records provider
+      final success = await savedRecordsNotifier.saveProduct(product, userId, 'image');
+      
+      if (success) {
+        // Show success message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${product.displayName} saved to records'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Show error message
+        if (context.mounted) {
+          final state = ref.read(savedRecordsProvider);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage ?? 'Failed to save product'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Show error message for unexpected errors
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Cannot save ${product.productTypeDisplay} - unsupported type'),
-            backgroundColor: Colors.orange,
+            content: Text('Error saving product: ${e.toString()}'),
+            backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
           ),
         );
-        return;
-    }
-    
-    if (specificProduct != null) {
-      // Add to saved records
-      ref.read(savedRecordsProvider.notifier).addRecord(specificProduct);
-      
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${product.displayName} saved to records'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      }
     }
   }
 
@@ -903,12 +903,25 @@ class ImageSearchResultsScreen extends ConsumerWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () => _saveProduct(context, ref, provider.searchResults.first),
-              icon: const Icon(Icons.save),
-              label: const Text('Save Product'),
+              icon: const Icon(Icons.save, color: Colors.white),
+              label: const Text(
+                'Save Product',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.green.shade600,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 3,
+                shadowColor: Colors.black.withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                side: BorderSide.none,
               ),
             ),
           ),

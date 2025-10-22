@@ -16,8 +16,13 @@ class _ImageSearchScreenState extends ConsumerState<ImageSearchScreen> {
   @override
   void initState() {
     super.initState();
-    // Don't reset state automatically - let the user control it
-    // The state will be reset when user explicitly navigates back to this screen
+    // Reset image search provider state when entering this screen
+    // This ensures old images don't persist when navigating back from other screens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(imageSearchProvider.notifier).reset();
+      }
+    });
   }
 
   @override
@@ -386,12 +391,8 @@ class _ImageSearchScreenState extends ConsumerState<ImageSearchScreen> {
           imageFile: imageFile,
         ),
       ),
-    ).then((_) {
-      // Reset state again when returning from processing screen
-      if (mounted) {
-        ref.read(imageSearchProvider.notifier).reset();
-      }
-    });
+    );
+    // Note: We don't reset the state when returning because the results screen needs the completed state
   }
 
 }

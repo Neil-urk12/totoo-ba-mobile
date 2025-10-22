@@ -154,6 +154,11 @@ class ImageVerificationService {
 
   // Image verification endpoint
   Future<ApiResponse<ProductVerificationResponse>> verifyProductImage(File imageFile) async {
+    return await _verifyProductImageMain(imageFile);
+  }
+
+  // Main verification method
+  Future<ApiResponse<ProductVerificationResponse>> _verifyProductImageMain(File imageFile) async {
     try {
       
       // Check if file exists and is readable
@@ -163,8 +168,14 @@ class ImageVerificationService {
       
       // Check file size
       final fileSize = await imageFile.length();
+      print('ImageVerificationService: File size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
       if (fileSize > 5 * 1024 * 1024) {
         return ApiResponse.error('Image file is too large (max 5MB)');
+      }
+      
+      // Check if file is empty
+      if (fileSize == 0) {
+        return ApiResponse.error('Image file is empty');
       }
       
 
@@ -176,23 +187,104 @@ class ImageVerificationService {
 
       // Add headers
       request.headers.addAll(ApiConfig.multipartHeaders);
+      // Add additional headers that might help with PNG processing
+      request.headers['User-Agent'] = 'Flutter-ProductChecker/1.0';
+      request.headers['Cache-Control'] = 'no-cache';
+      print('ImageVerificationService: Request headers: ${request.headers}');
 
       // Add image file
       final imageBytes = await imageFile.readAsBytes();
+      
+      // Detect image format from file content, not just extension
+      final fileExtension = imageFile.path.toLowerCase().split('.').last;
+      print('ImageVerificationService: Detected file extension: $fileExtension');
+      print('ImageVerificationService: Full file path: ${imageFile.path}');
+      
+      // Detect actual file format from content
+      String actualFormat;
+      String contentType;
+      String filename;
+      
+      if (imageBytes.length >= 4) {
+        final firstBytes = imageBytes.take(4).toList();
+        
+        // Check for JPEG signature (0xFF 0xD8 0xFF)
+        if (firstBytes[0] == 0xFF && firstBytes[1] == 0xD8 && firstBytes[2] == 0xFF) {
+          actualFormat = 'jpeg';
+          contentType = 'image/jpeg';
+          filename = 'product_image.jpg';
+          print('ImageVerificationService: Detected actual format: JPEG (from content)');
+        }
+        // Check for WebP signature (RIFF...WEBP)
+        else if (imageBytes.length >= 12 && 
+                 firstBytes[0] == 0x52 && firstBytes[1] == 0x49 && firstBytes[2] == 0x46 && firstBytes[3] == 0x46 &&
+                 imageBytes[8] == 0x57 && imageBytes[9] == 0x45 && imageBytes[10] == 0x42 && imageBytes[11] == 0x50) {
+          actualFormat = 'webp';
+          contentType = 'image/webp';
+          filename = 'product_image.webp';
+          print('ImageVerificationService: Detected actual format: WebP (from content)');
+        }
+        else {
+          // Fallback to extension-based detection
+          actualFormat = fileExtension;
+          switch (fileExtension) {
+            case 'jpg':
+            case 'jpeg':
+              contentType = 'image/jpeg';
+              filename = 'product_image.jpg';
+              break;
+            case 'webp':
+              contentType = 'image/webp';
+              filename = 'product_image.webp';
+              break;
+            default:
+              return ApiResponse.error('Unsupported image format: $fileExtension. Please use JPG or WebP format.');
+          }
+          print('ImageVerificationService: Using extension-based format: $actualFormat');
+        }
+      } else {
+        return ApiResponse.error('Invalid image file: file too small');
+      }
+      
+      // Validate that we have a supported format
+      if (!['jpg', 'jpeg', 'webp'].contains(actualFormat)) {
+        return ApiResponse.error('Unsupported image format: $actualFormat. Please use JPG or WebP format.');
+      }
+      
+      print('ImageVerificationService: Using content type: $contentType, filename: $filename');
+      print('ImageVerificationService: Image bytes length: ${imageBytes.length}');
+      print('ImageVerificationService: Parsed MediaType: ${MediaType.parse(contentType)}');
+      
+      // Use consistent approach for both JPG and WebP - fromBytes for better control
       final multipartFile = http.MultipartFile.fromBytes(
         'image',
         imageBytes,
-        filename: 'product_image.jpg',
-        contentType: MediaType('image', 'jpeg'),
+        filename: filename,
+        contentType: MediaType.parse(contentType),
       );
       request.files.add(multipartFile);
+      
+      print('ImageVerificationService: Multipart file added successfully');
+      print('ImageVerificationService: Multipart file details - field: image, filename: $filename, contentType: ${MediaType.parse(contentType)}');
+      
+      // Log first few bytes to verify file content
+      if (imageBytes.length >= 4) {
+        final firstBytes = imageBytes.take(4).map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}').join(' ');
+        print('ImageVerificationService: First 4 bytes: $firstBytes');
+      }
       
       
       
       // Send request
+      print('ImageVerificationService: Sending request to: ${ApiConfig.verifyImageUrl}');
+      print('ImageVerificationService: Request files count: ${request.files.length}');
       
       final streamedResponse = await request.send().timeout(ApiConfig.requestTimeout);
       final response = await http.Response.fromStream(streamedResponse);
+      
+      print('ImageVerificationService: Response status code: ${response.statusCode}');
+      print('ImageVerificationService: Response headers: ${response.headers}');
+      print('ImageVerificationService: Response body length: ${response.body.length}');
       
 
       if (response.statusCode == 200) {
@@ -200,12 +292,15 @@ class ImageVerificationService {
         final verificationResponse = ProductVerificationResponse.fromJson(data);
         return ApiResponse.success(verificationResponse, statusCode: response.statusCode);
       } else {
+        print('ImageVerificationService: Error response body: ${response.body}');
         String errorMessage = 'Image verification failed';
         try {
           final errorData = json.decode(response.body) as Map<String, dynamic>;
           errorMessage = errorData['detail'] ?? errorData['message'] ?? errorMessage;
+          print('ImageVerificationService: Parsed error message: $errorMessage');
         } catch (e) {
           errorMessage = 'Image verification failed with status: ${response.statusCode}';
+          print('ImageVerificationService: Failed to parse error response: $e');
         }
         
         
@@ -236,6 +331,7 @@ class ImageVerificationService {
       }
     }
   }
+
 
   // Dispose client when done
   void dispose() {

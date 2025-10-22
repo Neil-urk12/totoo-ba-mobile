@@ -9,7 +9,7 @@ class ApiConfig {
   static String get apiVersion => 'v1';
   
   // API endpoints
-  static String get verifyImageEndpoint => '/api/$apiVersion/products/verify-image';
+  static String get verifyImageEndpoint => '/api/$apiVersion/products/new-verify-image';
   
   // Full URLs
   static String get verifyImageUrl => '$baseUrl$verifyImageEndpoint';

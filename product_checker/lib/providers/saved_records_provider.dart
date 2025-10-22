@@ -1,215 +1,384 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/drug_product.dart';
-import '../data/mock_data.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import '../models/generic_product.dart';
 
-class SavedRecordsNotifier extends StateNotifier<List<DrugProduct>> {
-  SavedRecordsNotifier() : super(MockData.savedDrugProducts);
+class SavedRecord {
+  final String id;
+  final String userId;
+  final String productId;
+  final String productType;
+  final String productName;
+  final String? brandName;
+  final String? manufacturer;
+  final String? registrationNumber;
+  final String? genericName;
+  final String? dosageStrength;
+  final String? dosageForm;
+  final String? classification;
+  final String? countryOfOrigin;
+  final String? applicantCompany;
+  final String? description;
+  final double? confidence;
+  final bool isVerified;
+  final DateTime savedAt;
+  final String searchType; // 'text' or 'image'
 
-  // Add a new drug product
-  void addRecord(DrugProduct record) {
-    state = [...state, record];
+  const SavedRecord({
+    required this.id,
+    required this.userId,
+    required this.productId,
+    required this.productType,
+    required this.productName,
+    this.brandName,
+    this.manufacturer,
+    this.registrationNumber,
+    this.genericName,
+    this.dosageStrength,
+    this.dosageForm,
+    this.classification,
+    this.countryOfOrigin,
+    this.applicantCompany,
+    this.description,
+    this.confidence,
+    required this.isVerified,
+    required this.savedAt,
+    required this.searchType,
+  });
+
+  factory SavedRecord.fromMap(Map<String, dynamic> map) {
+    return SavedRecord(
+      id: map['id'] ?? '',
+      userId: map['user_id'] ?? '',
+      productId: map['product_id'] ?? '',
+      productType: map['product_type'] ?? '',
+      productName: map['product_name'] ?? '',
+      brandName: map['brand_name'],
+      manufacturer: map['manufacturer'],
+      registrationNumber: map['registration_number'],
+      genericName: map['generic_name'],
+      dosageStrength: map['dosage_strength'],
+      dosageForm: map['dosage_form'],
+      classification: map['classification'],
+      countryOfOrigin: map['country_of_origin'],
+      applicantCompany: map['applicant_company'],
+      description: map['description'],
+      confidence: map['confidence']?.toDouble(),
+      isVerified: map['is_verified'] ?? false,
+      savedAt: DateTime.parse(map['saved_at']),
+      searchType: map['search_type'] ?? 'text',
+    );
   }
 
-  // Remove a drug product
-  void removeRecord(String id) {
-    state = state.where((record) => record.id != id).toList();
+  Map<String, dynamic> toMap() {
+    return {
+      'user_id': userId,
+      'product_id': productId,
+      'product_type': productType,
+      'product_name': productName,
+      'brand_name': brandName,
+      'manufacturer': manufacturer,
+      'registration_number': registrationNumber,
+      'generic_name': genericName,
+      'dosage_strength': dosageStrength,
+      'dosage_form': dosageForm,
+      'classification': classification,
+      'country_of_origin': countryOfOrigin,
+      'applicant_company': applicantCompany,
+      'description': description,
+      'confidence': confidence,
+      'is_verified': isVerified,
+      'search_type': searchType,
+    };
   }
 
-  // Update a drug product
-  void updateRecord(DrugProduct updatedRecord) {
-    state = state.map((record) {
-      if (record.id == updatedRecord.id) {
-        return updatedRecord;
-      }
-      return record;
-    }).toList();
-  }
-
-  // Clear all records
-  void clearAllRecords() {
-    state = [];
-  }
-
-  // Search records by generic name, brand name, or registration number
-  List<DrugProduct> searchRecords(String query) {
-    if (query.isEmpty) return state;
-    
-    final lowercaseQuery = query.toLowerCase();
-    return state.where((record) {
-      return record.genericName.toLowerCase().contains(lowercaseQuery) ||
-             record.brandName.toLowerCase().contains(lowercaseQuery) ||
-             record.registrationNumber.toLowerCase().contains(lowercaseQuery) ||
-             record.manufacturer.toLowerCase().contains(lowercaseQuery);
-    }).toList();
-  }
-
-  // Filter records by status
-  List<DrugProduct> filterByStatus(String status) {
-    if (status == 'All') return state;
-    return state.where((record) => record.status == status).toList();
-  }
-
-  // Filter records by classification
-  List<DrugProduct> filterByClassification(String classification) {
-    if (classification == 'All') return state;
-    return state.where((record) => record.classification == classification).toList();
-  }
-
-  // Sort records by issuance date (newest first)
-  List<DrugProduct> sortByIssuanceDate() {
-    final sortedList = List<DrugProduct>.from(state);
-    sortedList.sort((a, b) => b.issuanceDate.compareTo(a.issuanceDate));
-    return sortedList;
-  }
-
-  // Sort records by expiry date (soonest first)
-  List<DrugProduct> sortByExpiryDate() {
-    final sortedList = List<DrugProduct>.from(state);
-    sortedList.sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
-    return sortedList;
-  }
-
-  // Sort records by generic name
-  List<DrugProduct> sortByGenericName() {
-    final sortedList = List<DrugProduct>.from(state);
-    sortedList.sort((a, b) => a.genericName.compareTo(b.genericName));
-    return sortedList;
-  }
-
-  // Sort records by brand name
-  List<DrugProduct> sortByBrandName() {
-    final sortedList = List<DrugProduct>.from(state);
-    sortedList.sort((a, b) => a.brandName.compareTo(b.brandName));
-    return sortedList;
-  }
-
-  // Sort records by manufacturer
-  List<DrugProduct> sortByManufacturer() {
-    final sortedList = List<DrugProduct>.from(state);
-    sortedList.sort((a, b) => a.manufacturer.compareTo(b.manufacturer));
-    return sortedList;
+  GenericProduct toGenericProduct() {
+    return GenericProduct(
+      id: productId,
+      productType: productType,
+      productName: productName,
+      brandName: brandName,
+      manufacturer: manufacturer,
+      registrationNumber: registrationNumber,
+      description: description,
+      confidence: confidence,
+      isVerified: isVerified,
+      genericName: genericName,
+      dosageStrength: dosageStrength,
+      dosageForm: dosageForm,
+      classification: classification,
+      countryOfOrigin: countryOfOrigin,
+      applicantCompany: applicantCompany,
+    );
   }
 }
 
-// Provider for saved records
-final savedRecordsProvider = StateNotifierProvider<SavedRecordsNotifier, List<DrugProduct>>((ref) {
-  return SavedRecordsNotifier();
-});
+class SavedRecordsState {
+  final List<SavedRecord> records;
+  final bool isLoading;
+  final String? errorMessage;
+  final bool isSaving;
 
-// Provider for search query
+  const SavedRecordsState({
+    this.records = const [],
+    this.isLoading = false,
+    this.errorMessage,
+    this.isSaving = false,
+  });
+
+  SavedRecordsState copyWith({
+    List<SavedRecord>? records,
+    bool? isLoading,
+    String? errorMessage,
+    bool? isSaving,
+  }) {
+    return SavedRecordsState(
+      records: records ?? this.records,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage ?? this.errorMessage,
+      isSaving: isSaving ?? this.isSaving,
+    );
+  }
+
+  bool isProductSaved(String productId) {
+    return records.any((record) => record.productId == productId);
+  }
+
+  bool get isEmpty => records.isEmpty;
+}
+
+class SavedRecordsNotifier extends StateNotifier<SavedRecordsState> {
+  SavedRecordsNotifier() : super(const SavedRecordsState());
+
+  Future<void> loadSavedRecords(String userId) async {
+    try {
+      state = state.copyWith(isLoading: true, errorMessage: null);
+
+      final prefs = await SharedPreferences.getInstance();
+      final recordsJson = prefs.getStringList('saved_records_$userId') ?? [];
+      
+      final records = recordsJson
+          .map((json) => SavedRecord.fromMap(jsonDecode(json)))
+          .toList();
+
+      // Sort by saved date (newest first)
+      records.sort((a, b) => b.savedAt.compareTo(a.savedAt));
+
+      state = state.copyWith(
+        records: records,
+        isLoading: false,
+        errorMessage: null,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to load saved records: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<bool> saveProduct(GenericProduct product, String userId, String searchType) async {
+    try {
+      state = state.copyWith(isSaving: true, errorMessage: null);
+
+      // Check if product is already saved
+      if (state.isProductSaved(product.id)) {
+        state = state.copyWith(
+          isSaving: false,
+          errorMessage: 'Product is already saved',
+        );
+        return false;
+      }
+
+      final record = SavedRecord(
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
+        userId: userId,
+        productId: product.id,
+        productType: product.productType,
+        productName: product.productName ?? 'Unknown Product',
+        brandName: product.brandName,
+        manufacturer: product.manufacturer,
+        registrationNumber: product.registrationNumber,
+        genericName: product.genericName,
+        dosageStrength: product.dosageStrength,
+        dosageForm: product.dosageForm,
+        classification: product.classification,
+        countryOfOrigin: product.countryOfOrigin,
+        applicantCompany: product.applicantCompany,
+        description: product.description,
+        confidence: product.confidence,
+        isVerified: product.isVerified,
+        savedAt: DateTime.now(),
+        searchType: searchType,
+      );
+
+      // Load existing records
+      final prefs = await SharedPreferences.getInstance();
+      final existingRecordsJson = prefs.getStringList('saved_records_$userId') ?? [];
+      
+      // Add new record
+      existingRecordsJson.add(jsonEncode(record.toMap()));
+      
+      // Save back to SharedPreferences
+      await prefs.setStringList('saved_records_$userId', existingRecordsJson);
+      
+      state = state.copyWith(
+        records: [record, ...state.records],
+        isSaving: false,
+        errorMessage: null,
+      );
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isSaving: false,
+        errorMessage: 'Failed to save product: ${e.toString()}',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> removeProduct(String productId) async {
+    try {
+      state = state.copyWith(isLoading: true, errorMessage: null);
+
+      // Find the record to get the userId
+      final recordToRemove = state.records.firstWhere(
+        (record) => record.productId == productId,
+        orElse: () => throw Exception('Record not found'),
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      final recordsJson = prefs.getStringList('saved_records_${recordToRemove.userId}') ?? [];
+      
+      // Remove the record
+      final updatedRecordsJson = recordsJson.where((json) {
+        final record = SavedRecord.fromMap(jsonDecode(json));
+        return record.productId != productId;
+      }).toList();
+      
+      // Save back to SharedPreferences
+      await prefs.setStringList('saved_records_${recordToRemove.userId}', updatedRecordsJson);
+
+      state = state.copyWith(
+        records: state.records.where((record) => record.productId != productId).toList(),
+        isLoading: false,
+        errorMessage: null,
+      );
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Failed to remove product: ${e.toString()}',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> removeRecord(String productId) async {
+    return await removeProduct(productId);
+  }
+
+  void clearError() {
+    state = state.copyWith(errorMessage: null);
+  }
+}
+
+// Additional providers for saved screen functionality
 final searchQueryProvider = StateProvider<String>((ref) => '');
-
-// Provider for selected filter
 final selectedFilterProvider = StateProvider<String>((ref) => 'All');
-
-// Provider for selected category filter
 final selectedCategoryProvider = StateProvider<String>((ref) => 'All');
-
-// Provider for selected sort option
 final selectedSortProvider = StateProvider<String>((ref) => 'Issuance Date (Newest First)');
+final resetSavedScreenProvider = StateProvider<bool>((ref) => false);
 
-// Provider for filtered and searched records with memoization
-final filteredRecordsProvider = Provider<List<DrugProduct>>((ref) {
-  final records = ref.watch(savedRecordsProvider);
-  final searchQuery = ref.watch(searchQueryProvider);
-  final statusFilter = ref.watch(selectedFilterProvider);
-  final classificationFilter = ref.watch(selectedCategoryProvider);
-  final sortOption = ref.watch(selectedSortProvider);
-
-  // Early return if no filters applied
-  if (searchQuery.isEmpty && statusFilter == 'All' && classificationFilter == 'All') {
-    return _applySorting(records, sortOption);
-  }
-
-  var filteredRecords = records;
-
-  // Apply search filter
-  if (searchQuery.isNotEmpty) {
-    final lowercaseQuery = searchQuery.toLowerCase();
-    filteredRecords = filteredRecords.where((record) {
-      return record.genericName.toLowerCase().contains(lowercaseQuery) ||
-             record.brandName.toLowerCase().contains(lowercaseQuery) ||
-             record.registrationNumber.toLowerCase().contains(lowercaseQuery) ||
-             record.manufacturer.toLowerCase().contains(lowercaseQuery);
-    }).toList();
-  }
-
-  // Apply status filter
-  if (statusFilter != 'All') {
-    filteredRecords = filteredRecords.where((record) => 
-        record.status == statusFilter).toList();
-  }
-
-  // Apply classification filter
-  if (classificationFilter != 'All') {
-    filteredRecords = filteredRecords.where((record) => 
-        record.classification == classificationFilter).toList();
-  }
-
-  // Apply sorting
-  return _applySorting(filteredRecords, sortOption);
+// Computed providers
+final availableStatusesProvider = Provider<List<String>>((ref) {
+  final records = ref.watch(savedRecordsProvider).records;
+  final statuses = records.map((record) => record.isVerified ? 'Verified' : 'Not Verified').toSet().toList();
+  statuses.insert(0, 'All');
+  return statuses;
 });
 
-// Helper function to apply sorting
-List<DrugProduct> _applySorting(List<DrugProduct> records, String sortOption) {
-  final sortedRecords = List<DrugProduct>.from(records);
-  
-  switch (sortOption) {
+final availableCategoriesProvider = Provider<List<String>>((ref) {
+  final records = ref.watch(savedRecordsProvider).records;
+  final categories = records.map((record) => record.productType).toSet().toList();
+  categories.insert(0, 'All');
+  return categories;
+});
+
+final sortOptionsProvider = Provider<List<String>>((ref) => [
+  'Issuance Date (Newest First)',
+  'Issuance Date (Oldest First)',
+  'Product Name (A-Z)',
+  'Product Name (Z-A)',
+  'Product Type (A-Z)',
+  'Product Type (Z-A)',
+]);
+
+final filteredRecordsProvider = Provider<List<SavedRecord>>((ref) {
+  final records = ref.watch(savedRecordsProvider).records;
+  final searchQuery = ref.watch(searchQueryProvider);
+  final selectedFilter = ref.watch(selectedFilterProvider);
+  final selectedCategory = ref.watch(selectedCategoryProvider);
+  final selectedSort = ref.watch(selectedSortProvider);
+
+  var filteredRecords = records.where((record) {
+    // Search filter
+    if (searchQuery.isNotEmpty) {
+      final query = searchQuery.toLowerCase();
+      if (!record.productName.toLowerCase().contains(query) &&
+          !(record.brandName?.toLowerCase().contains(query) ?? false) &&
+          !(record.manufacturer?.toLowerCase().contains(query) ?? false) &&
+          !(record.registrationNumber?.toLowerCase().contains(query) ?? false)) {
+        return false;
+      }
+    }
+
+    // Status filter
+    if (selectedFilter != 'All') {
+      final isVerified = selectedFilter == 'Verified';
+      if (record.isVerified != isVerified) {
+        return false;
+      }
+    }
+
+    // Category filter
+    if (selectedCategory != 'All') {
+      if (record.productType != selectedCategory) {
+        return false;
+      }
+    }
+
+    return true;
+  }).toList();
+
+  // Sort records
+  switch (selectedSort) {
     case 'Issuance Date (Newest First)':
-      sortedRecords.sort((a, b) => b.issuanceDate.compareTo(a.issuanceDate));
+      filteredRecords.sort((a, b) => b.savedAt.compareTo(a.savedAt));
       break;
     case 'Issuance Date (Oldest First)':
-      sortedRecords.sort((a, b) => a.issuanceDate.compareTo(b.issuanceDate));
+      filteredRecords.sort((a, b) => a.savedAt.compareTo(b.savedAt));
       break;
-    case 'Expiry Date (Soonest First)':
-      sortedRecords.sort((a, b) => a.expiryDate.compareTo(b.expiryDate));
+    case 'Product Name (A-Z)':
+      filteredRecords.sort((a, b) => a.productName.compareTo(b.productName));
       break;
-    case 'Expiry Date (Latest First)':
-      sortedRecords.sort((a, b) => b.expiryDate.compareTo(a.expiryDate));
+    case 'Product Name (Z-A)':
+      filteredRecords.sort((a, b) => b.productName.compareTo(a.productName));
       break;
-    case 'Generic Name (A-Z)':
-      sortedRecords.sort((a, b) => a.genericName.compareTo(b.genericName));
+    case 'Product Type (A-Z)':
+      filteredRecords.sort((a, b) => a.productType.compareTo(b.productType));
       break;
-    case 'Generic Name (Z-A)':
-      sortedRecords.sort((a, b) => b.genericName.compareTo(a.genericName));
+    case 'Product Type (Z-A)':
+      filteredRecords.sort((a, b) => b.productType.compareTo(a.productType));
       break;
-    case 'Brand Name (A-Z)':
-      sortedRecords.sort((a, b) => a.brandName.compareTo(b.brandName));
-      break;
-    case 'Brand Name (Z-A)':
-      sortedRecords.sort((a, b) => b.brandName.compareTo(a.brandName));
-      break;
-    case 'Manufacturer (A-Z)':
-      sortedRecords.sort((a, b) => a.manufacturer.compareTo(b.manufacturer));
-      break;
-    case 'Manufacturer (Z-A)':
-      sortedRecords.sort((a, b) => b.manufacturer.compareTo(a.manufacturer));
-      break;
-    case 'Status':
-      sortedRecords.sort((a, b) => a.status.compareTo(b.status));
-      break;
-    default:
-      // Default to newest issuance date first
-      sortedRecords.sort((a, b) => b.issuanceDate.compareTo(a.issuanceDate));
   }
-  
-  return sortedRecords;
-}
 
-// Provider for available categories
-final availableCategoriesProvider = Provider<List<String>>((ref) {
-  return MockData.availableCategories;
+  return filteredRecords;
 });
 
-// Provider for available statuses
-final availableStatusesProvider = Provider<List<String>>((ref) {
-  return MockData.availableStatuses;
+// Main provider
+final savedRecordsProvider = StateNotifierProvider<SavedRecordsNotifier, SavedRecordsState>((ref) {
+  return SavedRecordsNotifier();
 });
-
-// Provider for sort options
-final sortOptionsProvider = Provider<List<String>>((ref) {
-  return MockData.sortOptions;
-});
-
-// Provider to trigger reset of saved screen state
-final resetSavedScreenProvider = StateProvider<bool>((ref) => false);

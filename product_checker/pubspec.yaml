@@ -57,6 +57,9 @@ dependencies:
   
   # HTTP parser for multipart requests
   http_parser: ^4.1.2
+  
+  # Local storage for saved records
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

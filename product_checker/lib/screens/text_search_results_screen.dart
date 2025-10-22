@@ -244,6 +244,7 @@ class TextSearchResultsScreen extends ConsumerWidget {
           GenericProductCard(
             product: provider.searchResults.first,
             onTap: () => _showProductDetails(context, provider.searchResults.first),
+            searchType: 'text',
           ),
           
           // Show additional results if available
@@ -272,6 +273,7 @@ class TextSearchResultsScreen extends ConsumerWidget {
                     child: GenericProductCard(
                       product: product,
                       onTap: () => _showProductDetails(context, product),
+                      searchType: 'text',
                     ),
                   );
                 },

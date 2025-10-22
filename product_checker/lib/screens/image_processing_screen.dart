@@ -17,10 +17,18 @@ class ImageProcessingScreen extends ConsumerStatefulWidget {
 }
 
 class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
+  bool _processingStarted = false;
+
   @override
   void initState() {
     super.initState();
-    // Processing will be started in the build method
+    // Start processing immediately when the screen is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_processingStarted) {
+        _processingStarted = true;
+        _startProcessing(ref);
+      }
+    });
   }
 
   @override
@@ -78,12 +86,6 @@ class _ImageProcessingScreenState extends ConsumerState<ImageProcessingScreen> {
       builder: (context, ref, child) {
         final provider = ref.watch(imageSearchProvider);
         
-        // Start processing if idle
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (provider.isIdle) {
-            _startProcessing(ref);
-          }
-        });
         return Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(

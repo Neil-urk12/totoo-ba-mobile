@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/saved_records_provider.dart';
-import '../widgets/drug_product_card.dart';
-import '../models/drug_product.dart';
+import '../widgets/generic_product_card.dart';
+import '../models/generic_product.dart';
 
 class SavedScreen extends ConsumerStatefulWidget {
   const SavedScreen({super.key});
@@ -170,11 +170,12 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               itemCount: filteredRecords.length,
                               itemBuilder: (context, index) {
-                                final product = filteredRecords[index];
-                                return DrugProductCard(
+                                final record = filteredRecords[index];
+                                final product = record.toGenericProduct();
+                                return GenericProductCard(
                                   product: product,
                                   onTap: () => _showProductDetails(context, product),
-                                  onDelete: () => _showDeleteConfirmation(context, product),
+                                  searchType: record.searchType,
                                 );
                               },
                             ),
@@ -450,7 +451,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     );
   }
 
-  void _showProductDetails(BuildContext context, DrugProduct product) {
+  void _showProductDetails(BuildContext context, GenericProduct product) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -563,9 +564,13 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                             [
                               _buildDetailRow('Status', product.status),
                               _buildDetailRow('Issuance Date', 
-                                  '${product.issuanceDate.day}/${product.issuanceDate.month}/${product.issuanceDate.year}'),
+                                  product.issuanceDate != null 
+                                      ? '${product.issuanceDate!.day}/${product.issuanceDate!.month}/${product.issuanceDate!.year}'
+                                      : null),
                               _buildDetailRow('Expiry Date', 
-                                  '${product.expiryDate.day}/${product.expiryDate.month}/${product.expiryDate.year}'),
+                                  product.expiryDate != null 
+                                      ? '${product.expiryDate!.day}/${product.expiryDate!.month}/${product.expiryDate!.year}'
+                                      : null),
                               _buildDetailRow('Days Until Expiry', '${product.daysUntilExpiry} days'),
                             ],
                           ),
@@ -601,7 +606,11 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String? value) {
+    if (value == null || value.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -622,32 +631,6 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
               value,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(BuildContext context, DrugProduct product) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Drug Product'),
-        content: Text('Are you sure you want to delete "${product.genericName} (${product.brandName})" from your saved products?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              ref.read(savedRecordsProvider.notifier).removeRecord(product.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Drug product deleted')),
-              );
-            },
-            child: const Text('Delete'),
           ),
         ],
       ),
