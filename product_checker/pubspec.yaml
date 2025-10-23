@@ -60,6 +60,9 @@ dependencies:
   
   # Local storage for saved records
   shared_preferences: ^2.5.3
+  
+  # Date formatting
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

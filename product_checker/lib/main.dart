@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/main_screen.dart';
+import 'screens/search_history_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/settings_provider.dart';
 import 'config/supabase_config.dart';
@@ -36,6 +37,9 @@ class MyApp extends ConsumerWidget {
       themeMode: themeMode,
       home: const MainScreen(),
       debugShowCheckedModeBanner: false,
+      routes: {
+        '/search-history': (context) => const SearchHistoryScreen(),
+      },
     );
   }
 }

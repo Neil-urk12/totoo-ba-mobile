@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/generic_product.dart';
 import '../providers/text_search_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/search_history_provider.dart';
 import '../widgets/generic_product_card.dart';
 import 'report_form_screen.dart';
 
-class TextSearchResultsScreen extends ConsumerWidget {
+class TextSearchResultsScreen extends ConsumerStatefulWidget {
   final String searchQuery;
   final bool skipLoadingState;
   
@@ -16,8 +18,29 @@ class TextSearchResultsScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TextSearchResultsScreen> createState() => _TextSearchResultsScreenState();
+}
+
+class _TextSearchResultsScreenState extends ConsumerState<TextSearchResultsScreen> {
+  bool _hasLoggedSearch = false;
+
+  @override
+  Widget build(BuildContext context) {
     final provider = ref.watch(textSearchProvider);
+    final authState = ref.watch(authProvider);
+    
+    // Log search history when results are completed and user is authenticated
+    if (provider.isCompleted && !_hasLoggedSearch && authState.isAuthenticated && authState.user != null) {
+      _hasLoggedSearch = true;
+      // Use Future.microtask to avoid calling during build
+      Future.microtask(() {
+        ref.read(searchHistoryProvider.notifier).addTextSearch(
+          userId: authState.user!.id,
+          searchQuery: widget.searchQuery,
+          results: provider.searchResults,
+        );
+      });
+    }
     
     return Scaffold(
       appBar: AppBar(
@@ -34,7 +57,7 @@ class TextSearchResultsScreen extends ConsumerWidget {
           },
         ),
       ),
-      body: (!skipLoadingState && provider.searchResults.isEmpty && !provider.isCompleted && !provider.hasError)
+      body: (!widget.skipLoadingState && provider.searchResults.isEmpty && !provider.isCompleted && !provider.hasError)
         ? _buildLoadingState(context) 
         : _buildResultsState(context, ref, provider),
     );
@@ -218,7 +241,7 @@ class TextSearchResultsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            searchQuery,
+            widget.searchQuery,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w500,
             ),

@@ -53,6 +53,22 @@ class SettingScreen extends ConsumerWidget {
             ),
           ),
           
+          // Search History Section (only show if authenticated)
+          if (authState.isAuthenticated) ...[
+            const SizedBox(height: 16),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Search History'),
+                subtitle: const Text('View your recent searches'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).pushNamed('/search-history');
+                },
+              ),
+            ),
+          ],
+          
           // About Section (always visible)
           const SizedBox(height: 16),
           Card(

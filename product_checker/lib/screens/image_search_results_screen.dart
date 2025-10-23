@@ -4,6 +4,8 @@ import 'dart:io';
 import '../models/generic_product.dart';
 import '../providers/image_search_provider.dart';
 import '../providers/saved_records_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/search_history_provider.dart';
 import '../widgets/generic_product_card.dart';
 import 'image_search_screen.dart';
 import 'image_processing_screen.dart';
@@ -23,7 +25,7 @@ class ResultInfo {
   });
 }
 
-class ImageSearchResultsScreen extends ConsumerWidget {
+class ImageSearchResultsScreen extends ConsumerStatefulWidget {
   final File imageFile;
   
   const ImageSearchResultsScreen({
@@ -32,8 +34,28 @@ class ImageSearchResultsScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ImageSearchResultsScreen> createState() => _ImageSearchResultsScreenState();
+}
+
+class _ImageSearchResultsScreenState extends ConsumerState<ImageSearchResultsScreen> {
+  bool _hasLoggedSearch = false;
+
+  @override
+  Widget build(BuildContext context) {
     final provider = ref.watch(imageSearchProvider);
+    final authState = ref.watch(authProvider);
+    
+    // Log search history when results are completed and user is authenticated
+    if (provider.isCompleted && !_hasLoggedSearch && authState.isAuthenticated && authState.user != null) {
+      _hasLoggedSearch = true;
+      // Use Future.microtask to avoid calling during build
+      Future.microtask(() {
+        ref.read(searchHistoryProvider.notifier).addImageSearch(
+          userId: authState.user!.id,
+          results: provider.searchResults,
+        );
+      });
+    }
     
     return Scaffold(
       appBar: AppBar(
@@ -192,7 +214,7 @@ class ImageSearchResultsScreen extends ConsumerWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
                   child: Image.file(
-                    imageFile,
+                    widget.imageFile,
                     fit: BoxFit.cover,
                   ),
       ),
@@ -596,7 +618,7 @@ class ImageSearchResultsScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ReportFormScreen(
-          imageFile: imageFile,
+          imageFile: widget.imageFile,
           detectedProductName: provider.detectedProductName,
           detectedBrandName: provider.detectedBrandName,
         ),
@@ -610,14 +632,14 @@ class ImageSearchResultsScreen extends ConsumerWidget {
     
     // Wait a moment for the reset to complete, then set image
     Future.delayed(const Duration(milliseconds: 50), () {
-      ref.read(imageSearchProvider.notifier).setImage(imageFile);
+      ref.read(imageSearchProvider.notifier).setImage(widget.imageFile);
       
       // Navigate back to processing screen
       if (context.mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => ImageProcessingScreen(
-              imageFile: imageFile,
+              imageFile: widget.imageFile,
             ),
           ),
         );
