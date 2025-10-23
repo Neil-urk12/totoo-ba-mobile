@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/mock_data.dart';
 import '../models/report.dart';
+import '../services/reported_products_service.dart';
 
 // Search query provider
 final searchQueryProvider = StateProvider<String>((ref) => '');
@@ -11,9 +11,15 @@ final selectedSortOptionProvider = StateProvider<String>((ref) => 'Report Date (
 // Loading state provider
 final isLoadingProvider = StateProvider<bool>((ref) => true);
 
+// Reported Products Service provider
+final reportedProductsServiceProvider = Provider<ReportedProductsService>((ref) {
+  return ReportedProductsService();
+});
+
 // Reports state provider
 final reportsStateProvider = StateNotifierProvider<ReportsNotifier, List<Report>>((ref) {
-  return ReportsNotifier();
+  final service = ref.watch(reportedProductsServiceProvider);
+  return ReportsNotifier(service);
 });
 
 // Reports provider (now uses the state notifier)
@@ -23,23 +29,70 @@ final reportsProvider = Provider<List<Report>>((ref) {
 
 // Reports Notifier class
 class ReportsNotifier extends StateNotifier<List<Report>> {
-  ReportsNotifier() : super(MockData.savedReports);
+  final ReportedProductsService _service;
 
-  void addReport(Report report) {
+  ReportsNotifier(this._service) : super([]);
+
+  /// Load all reports from Supabase
+  Future<void> loadAllReports() async {
+    final reports = await _service.getAllReports();
+    state = reports;
+  }
+
+  /// Load reports for a specific user
+  Future<void> loadUserReports(String userId) async {
+    final reports = await _service.getUserReports(userId);
+    state = reports;
+  }
+
+  /// Create a new report
+  Future<Report?> createReport({
+    String? userId, // Nullable for anonymous reports
+    required String productName,
+    String? brandName,
+    String? registrationNumber,
+    required String description,
+    String? reporterName,
+    String? location,
+    String? storeName,
+  }) async {
+    final report = await _service.createReport(
+      userId: userId,
+      productName: productName,
+      brandName: brandName,
+      registrationNumber: registrationNumber,
+      description: description,
+      reporterName: reporterName,
+      location: location,
+      storeName: storeName,
+    );
+
+    if (report != null) {
+      state = [report, ...state];
+    }
+
+    return report;
+  }
+
+  /// Delete a report
+  Future<bool> deleteReport(String reportId) async {
+    final success = await _service.deleteReport(reportId);
+    
+    if (success) {
+      state = state.where((report) => report.id != reportId).toList();
+    }
+
+    return success;
+  }
+
+  /// Update local state with a new report (for optimistic updates)
+  void addReportLocally(Report report) {
     state = [report, ...state];
   }
 
-  void removeReport(String reportId) {
+  /// Remove report from local state (for optimistic updates)
+  void removeReportLocally(String reportId) {
     state = state.where((report) => report.id != reportId).toList();
-  }
-
-  void updateReport(Report updatedReport) {
-    state = state.map((report) {
-      if (report.id == updatedReport.id) {
-        return updatedReport;
-      }
-      return report;
-    }).toList();
   }
 }
 
@@ -145,3 +198,15 @@ final reportsScreenControllerProvider = StateNotifierProvider<ReportsScreenContr
 
 // Provider to trigger reset of reports screen state
 final resetReportsScreenProvider = StateProvider<bool>((ref) => false);
+
+// Sort options provider
+final reportSortOptionsProvider = Provider<List<String>>((ref) => [
+  'Report Date (Newest First)',
+  'Report Date (Oldest First)',
+  'Product Name (A-Z)',
+  'Product Name (Z-A)',
+  'Brand Name (A-Z)',
+  'Brand Name (Z-A)',
+  'Location (A-Z)',
+  'Location (Z-A)',
+]);

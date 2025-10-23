@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
-import '../models/report.dart';
 import '../providers/reports_provider.dart';
+import '../providers/auth_provider.dart';
 
 class ReportFormScreen extends ConsumerStatefulWidget {
   final File? imageFile;
@@ -398,9 +398,31 @@ class _ReportFormScreenState extends ConsumerState<ReportFormScreen> {
     });
 
     try {
-      // Create report
-      final report = Report(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      // Get user info from auth provider
+      final authState = ref.read(authProvider);
+      final userId = authState.user?.id; // Null for anonymous users
+      final userName = authState.user?.name;
+
+      // Determine reporter name:
+      // 1. If user is logged in and not anonymous, use their account name
+      // 2. If user manually entered a name and not anonymous, use that
+      // 3. If anonymous checkbox is checked, use null
+      String? reporterName;
+      if (_isAnonymous) {
+        reporterName = null;
+      } else if (userName != null && userName.isNotEmpty) {
+        // Use logged-in user's name
+        reporterName = userName;
+      } else if (_reporterNameController.text.trim().isNotEmpty) {
+        // Use manually entered name
+        reporterName = _reporterNameController.text.trim();
+      } else {
+        reporterName = null;
+      }
+
+      // Create report using Supabase
+      final report = await ref.read(reportsStateProvider.notifier).createReport(
+        userId: userId,
         productName: _productNameController.text.trim(),
         brandName: _brandNameController.text.trim().isEmpty 
           ? null 
@@ -409,25 +431,26 @@ class _ReportFormScreenState extends ConsumerState<ReportFormScreen> {
           ? null 
           : _registrationNumberController.text.trim(),
         description: _descriptionController.text.trim(),
-        reporterName: _isAnonymous 
-          ? null 
-          : _reporterNameController.text.trim(),
-        reportDate: DateTime.now(),
-        location: _locationController.text.trim(),
-        storeName: _storeNameController.text.trim(),
+        reporterName: reporterName,
+        location: _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+        storeName: _storeNameController.text.trim().isEmpty
+          ? null
+          : _storeNameController.text.trim(),
       );
 
-      // Add report to the reports provider
-      ref.read(reportsStateProvider.notifier).addReport(report);
-      await Future.delayed(const Duration(seconds: 1));
+      if (report == null) {
+        throw Exception('Failed to create report');
+      }
 
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Report submitted successfully!'),
+          const SnackBar(
+            content: Text('Report submitted successfully!'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
+            duration: Duration(seconds: 3),
           ),
         );
 

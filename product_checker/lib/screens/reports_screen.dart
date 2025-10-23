@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/mock_data.dart';
 import '../models/report.dart';
 import '../widgets/report_card_widget.dart';
 import '../providers/reports_provider.dart';
@@ -19,11 +18,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override
   void initState() {
     super.initState();
-    // Clear search state when screen is initialized
+    // Load reports from Supabase and clear search state when screen is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReports();
       _clearSearchState();
-      ref.read(reportsScreenControllerProvider.notifier).simulateLoading();
     });
+  }
+
+  Future<void> _loadReports() async {
+    ref.read(isLoadingProvider.notifier).state = true;
+    await ref.read(reportsStateProvider.notifier).loadAllReports();
+    if (mounted) {
+      ref.read(isLoadingProvider.notifier).state = false;
+    }
   }
 
   @override
@@ -197,7 +204,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
-                        items: MockData.reportSortOptions.map((String value) {
+                        items: ref.watch(reportSortOptionsProvider).map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
                             child: Text(
