@@ -16,11 +16,18 @@ class TextProcessingScreen extends ConsumerStatefulWidget {
 }
 
 class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
+  bool _hasStartedProcessing = false;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
-    // Processing will be started in the build method
+    // Start processing immediately after the widget is initialized
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasStartedProcessing) {
+        _startProcessing();
+      }
+    });
   }
 
   @override
@@ -28,70 +35,66 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
     super.dispose();
   }
 
-  void _startProcessing(WidgetRef ref) {
+  void _startProcessing() {
+    if (_hasStartedProcessing) {
+      print('TextProcessingScreen: Processing already started, skipping');
+      return;
+    }
+    
+    print('TextProcessingScreen: Starting processing for query: "${widget.searchQuery}"');
+    _hasStartedProcessing = true;
     final notifier = ref.read(textSearchProvider.notifier);
     
     // Reset the provider state before starting processing
     notifier.reset();
     
-    // Start the search - navigation will be handled by the build method listener
+    // Start the search
     notifier.searchProduct(widget.searchQuery);
+  }
+
+  void _navigateToResults() {
+    if (_hasNavigated) {
+      print('TextProcessingScreen: Navigation already occurred, skipping');
+      return;
+    }
+    
+    print('TextProcessingScreen: Navigating to results for query: "${widget.searchQuery}"');
+    _hasNavigated = true;
+    
+    final navigator = Navigator.of(context);
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        print('TextProcessingScreen: Executing navigation to TextSearchResultsScreen');
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => TextSearchResultsScreen(
+              searchQuery: widget.searchQuery,
+              skipLoadingState: true,
+            ),
+          ),
+        );
+      } else {
+        print('TextProcessingScreen: Widget not mounted, skipping navigation');
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final provider = ref.watch(textSearchProvider);
-        
-        // Start processing if not already started
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (provider.isIdle) {
-            _startProcessing(ref);
-          }
-        });
-        
-        // Listen for state changes and navigate when appropriate
-        ref.listen<TextSearchStateModel>(textSearchProvider, (previous, next) {
-          if (next.isCompleted && 
-              next.processingProgress >= 1.0 && 
-              next.currentProcessingMessage == 'Search completed successfully' &&
-              next.searchResult != TextSearchResult.unknown &&
-              next.searchResults.isNotEmpty &&
-              previous?.searchResult != next.searchResult) {
-            // Navigate when search is completed and results are fully processed
-            // Only navigate when the search result has actually changed from previous state
-            final navigator = Navigator.of(context);
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                navigator.pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => TextSearchResultsScreen(
-                      searchQuery: widget.searchQuery,
-                      skipLoadingState: true,
-                    ),
-                  ),
-                );
-              }
-            });
-          } else if (next.hasError && next.errorMessage.isNotEmpty) {
-            // Navigate when there's an error
-            final navigator = Navigator.of(context);
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                navigator.pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => TextSearchResultsScreen(
-                      searchQuery: widget.searchQuery,
-                      skipLoadingState: true,
-                    ),
-                  ),
-                );
-              }
-            });
-          }
-        });
-        return Scaffold(
+    final provider = ref.watch(textSearchProvider);
+    
+    // Listen for state changes and navigate when appropriate
+    ref.listen<TextSearchStateModel>(textSearchProvider, (previous, next) {
+      // Navigate when search is completed (regardless of results) or when there's an error
+      if (!_hasNavigated && 
+          ((next.isCompleted && next.processingProgress >= 1.0) || 
+           (next.hasError && next.errorMessage.isNotEmpty))) {
+        _navigateToResults();
+      }
+    });
+    
+    return Scaffold(
           backgroundColor: Theme.of(context).colorScheme.surface,
           body: SafeArea(
             child: SingleChildScrollView(
@@ -252,7 +255,5 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
             ),
           ),
         );
-      },
-    );
   }
 }

@@ -27,13 +27,14 @@ class TextSearchResultsScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
+            // Reset the text search provider state before navigating back
+            ref.read(textSearchProvider.notifier).reset();
             // Navigate back to home screen
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
         ),
       ),
-      body: (!skipLoadingState && provider.searchResults.isEmpty && !provider.isCompleted) ||
-             (skipLoadingState && provider.searchResult == TextSearchResult.unknown)
+      body: (!skipLoadingState && provider.searchResults.isEmpty && !provider.isCompleted && !provider.hasError)
         ? _buildLoadingState(context) 
         : _buildResultsState(context, ref, provider),
     );

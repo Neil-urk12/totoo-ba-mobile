@@ -29,6 +29,7 @@ class TextSearchStateModel {
   final String? detectedBrandName;
   final TextSearchResult searchResult;
   final String? resultMessage;
+  final String searchId; // Unique identifier for each search
 
   const TextSearchStateModel({
     this.state = TextSearchState.idle,
@@ -42,6 +43,7 @@ class TextSearchStateModel {
     this.detectedBrandName,
     this.searchResult = TextSearchResult.unknown,
     this.resultMessage,
+    this.searchId = '',
   });
 
   TextSearchStateModel copyWith({
@@ -56,6 +58,7 @@ class TextSearchStateModel {
     String? detectedBrandName,
     TextSearchResult? searchResult,
     String? resultMessage,
+    String? searchId,
   }) {
     return TextSearchStateModel(
       state: state ?? this.state,
@@ -69,6 +72,7 @@ class TextSearchStateModel {
       detectedBrandName: detectedBrandName ?? this.detectedBrandName,
       searchResult: searchResult ?? this.searchResult,
       resultMessage: resultMessage ?? this.resultMessage,
+      searchId: searchId ?? this.searchId,
     );
   }
 
@@ -96,11 +100,24 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
       return;
     }
 
+    // Generate unique search ID for this search instance
+    final searchId = DateTime.now().millisecondsSinceEpoch.toString();
+    print('TextSearchProvider: Starting new search with ID: $searchId, query: "$query"');
+    
+    // Clear previous state and start fresh
     state = state.copyWith(
       state: TextSearchState.processing,
       searchQuery: query.trim(),
+      searchResults: [],
+      errorMessage: '',
       processingProgress: 0.0,
       currentProcessingMessage: 'Starting search...',
+      isProductRegistered: false,
+      detectedProductName: null,
+      detectedBrandName: null,
+      searchResult: TextSearchResult.unknown,
+      resultMessage: null,
+      searchId: searchId,
     );
 
     try {
@@ -124,6 +141,7 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
       final searchResultType = _determineSearchResult(searchResults);
       
       // Complete when search is actually done and results are ready
+      print('TextSearchProvider: Search completed successfully (searchId: $searchId)');
       state = state.copyWith(
         state: TextSearchState.completed,
         searchResults: searchResults,
@@ -136,6 +154,7 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
         currentProcessingMessage: 'Search completed successfully',
       );
     } catch (e) {
+      print('TextSearchProvider: Search failed (searchId: $searchId), error: $e');
       _setError('Error searching product: $e');
     }
   }
@@ -203,7 +222,22 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
   }
 
   void reset() {
-    state = const TextSearchStateModel();
+    print('TextSearchProvider: Resetting state from ${state.state} (searchId: ${state.searchId})');
+    state = const TextSearchStateModel(
+      state: TextSearchState.idle,
+      searchQuery: '',
+      searchResults: [],
+      errorMessage: '',
+      currentProcessingMessage: '',
+      processingProgress: 0.0,
+      isProductRegistered: false,
+      detectedProductName: null,
+      detectedBrandName: null,
+      searchResult: TextSearchResult.unknown,
+      resultMessage: null,
+      searchId: '',
+    );
+    print('TextSearchProvider: State reset complete');
   }
 
   void cancelProcessing() {
