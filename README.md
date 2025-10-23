@@ -60,7 +60,7 @@ Before you begin contributing, please take the time to read our [Community Guide
 4. Add tests if applicable
 5. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 6. Push to the branch (`git push origin feature/AmazingFeature`)
-7. Open a Pull Request
+7. Open a [Pull Request](https://github.com/Neil-urk12/totoo-ba-mobile/pulls)
 
 ## Reporting Issues
 You may submit your reports/ suggestions at the [Issues Page](https://github.com/Neil-urk12/totoo-ba-mobile/issues).
