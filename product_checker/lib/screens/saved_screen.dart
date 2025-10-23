@@ -171,17 +171,34 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                       ? _buildEmptyState(context)
                       : filteredRecords.isEmpty
                           ? _buildNoResultsState(context)
-                          : ListView.builder(
-                              padding: EdgeInsets.zero,
-                              itemCount: filteredRecords.length,
-                              itemBuilder: (context, index) {
-                                final record = filteredRecords[index];
-                                return SavedRecordCard(
-                                  record: record,
-                                  onTap: () => _showRecordDetails(context, record),
-                                  onDelete: () => _confirmDelete(context, record),
-                                );
+                          : NotificationListener<ScrollNotification>(
+                              onNotification: (ScrollNotification scrollInfo) {
+                                final savedState = ref.read(savedRecordsProvider);
+                                if (!savedState.isLoadingMore &&
+                                    savedState.hasMore &&
+                                    scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+                                  final authState = ref.read(authProvider);
+                                  if (authState.user != null) {
+                                    ref.read(savedRecordsProvider.notifier).loadMoreSavedRecords(authState.user!.id);
+                                  }
+                                }
+                                return false;
                               },
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                itemCount: filteredRecords.length + (ref.watch(savedRecordsProvider).hasMore ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index == filteredRecords.length) {
+                                    return _buildLoadingIndicator();
+                                  }
+                                  final record = filteredRecords[index];
+                                  return SavedRecordCard(
+                                    record: record,
+                                    onTap: () => _showRecordDetails(context, record),
+                                    onDelete: () => _confirmDelete(context, record),
+                                  );
+                                },
+                              ),
                             ),
             ),
           ],
@@ -668,5 +685,14 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
         }
       }
     }
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const Padding(
+      padding: EdgeInsets.all(16.0),
+      child: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 }

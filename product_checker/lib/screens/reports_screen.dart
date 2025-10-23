@@ -265,16 +265,30 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 16),
-      itemCount: filteredReports.length,
-      itemBuilder: (context, index) {
-        final report = filteredReports[index];
-        return ReportCardWidget(
-          report: report,
-          onTap: () => _showReportDetails(report, ref.read(reportsScreenControllerProvider.notifier)),
-        );
+    final reportsState = ref.watch(reportsStateProvider);
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification scrollInfo) {
+        if (!reportsState.isLoadingMore &&
+            reportsState.hasMore &&
+            scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+          ref.read(reportsStateProvider.notifier).loadMoreReports();
+        }
+        return false;
       },
+      child: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 16),
+        itemCount: filteredReports.length + (reportsState.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == filteredReports.length) {
+            return _buildPaginationLoadingIndicator();
+          }
+          final report = filteredReports[index];
+          return ReportCardWidget(
+            report: report,
+            onTap: () => _showReportDetails(report, ref.read(reportsScreenControllerProvider.notifier)),
+          );
+        },
+      ),
     );
   }
 
@@ -524,6 +538,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
+
+  Widget _buildPaginationLoadingIndicator() {
+    return const Padding(
+      padding: EdgeInsets.all(16.0),
+      child: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

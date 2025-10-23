@@ -53,12 +53,18 @@ class ReportedProductsService {
   }
 
   /// Get all reports (for all users - public view)
-  Future<List<Report>> getAllReports() async {
+  Future<List<Report>> getAllReports({int? limit, int offset = 0}) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('reported_products')
           .select()
           .order('report_date', ascending: false);
+
+      if (limit != null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      final response = await query;
 
       return (response as List)
           .map((item) => Report(
@@ -80,13 +86,19 @@ class ReportedProductsService {
   }
 
   /// Get reports for a specific user
-  Future<List<Report>> getUserReports(String userId) async {
+  Future<List<Report>> getUserReports(String userId, {int? limit, int offset = 0}) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('reported_products')
           .select()
           .eq('user_id', userId)
           .order('report_date', ascending: false);
+
+      if (limit != null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      final response = await query;
 
       return (response as List)
           .map((item) => Report(

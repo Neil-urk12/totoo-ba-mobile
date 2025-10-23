@@ -22,15 +22,19 @@ class SavedRecordsService {
   }
 
   // Read: Get all saved records for a user
-  Future<List<SavedRecord>> getSavedRecords(String userId) async {
+  Future<List<SavedRecord>> getSavedRecords(String userId, {int? limit, int offset = 0}) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('saved_records')
           .select()
           .eq('user_id', userId)
           .order('saved_at', ascending: false);
 
-      return (response as List)
+      if (limit != null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      return (await query as List)
           .map((record) => SavedRecord.fromMap(record))
           .toList();
     } catch (e) {
@@ -125,17 +129,23 @@ class SavedRecordsService {
   // Read: Get saved records filtered by search type
   Future<List<SavedRecord>> getSavedRecordsBySearchType(
     String userId,
-    String searchType,
-  ) async {
+    String searchType, {
+    int? limit,
+    int offset = 0,
+  }) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('saved_records')
           .select()
           .eq('user_id', userId)
           .eq('search_type', searchType)
           .order('saved_at', ascending: false);
 
-      return (response as List)
+      if (limit != null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      return (await query as List)
           .map((record) => SavedRecord.fromMap(record))
           .toList();
     } catch (e) {
@@ -147,17 +157,23 @@ class SavedRecordsService {
   // Read: Get saved records filtered by verification status
   Future<List<SavedRecord>> getSavedRecordsByVerificationStatus(
     String userId,
-    bool isVerified,
-  ) async {
+    bool isVerified, {
+    int? limit,
+    int offset = 0,
+  }) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('saved_records')
           .select()
           .eq('user_id', userId)
           .eq('is_verified', isVerified)
           .order('saved_at', ascending: false);
 
-      return (response as List)
+      if (limit != null) {
+        query = query.range(offset, offset + limit - 1);
+      }
+
+      return (await query as List)
           .map((record) => SavedRecord.fromMap(record))
           .toList();
     } catch (e) {

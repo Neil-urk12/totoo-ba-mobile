@@ -9,12 +9,19 @@ class SearchHistoryState {
   final bool isLoading;
   final String? errorMessage;
   final String? filterType; // null = all, 'text', 'image'
+  final bool hasMore;
+  final bool isLoadingMore;
+  final int currentPage;
+  static const int pageSize = 25;
 
   const SearchHistoryState({
     this.searchHistory = const [],
     this.isLoading = false,
     this.errorMessage,
     this.filterType,
+    this.hasMore = true,
+    this.isLoadingMore = false,
+    this.currentPage = 0,
   });
 
   SearchHistoryState copyWith({
@@ -22,12 +29,18 @@ class SearchHistoryState {
     bool? isLoading,
     String? errorMessage,
     String? filterType,
+    bool? hasMore,
+    bool? isLoadingMore,
+    int? currentPage,
   }) {
     return SearchHistoryState(
       searchHistory: searchHistory ?? this.searchHistory,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       filterType: filterType ?? this.filterType,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      currentPage: currentPage ?? this.currentPage,
     );
   }
 
@@ -42,27 +55,82 @@ class SearchHistoryNotifier extends StateNotifier<SearchHistoryState> {
 
   SearchHistoryNotifier() : super(const SearchHistoryState());
 
-  /// Load search history for a user
+  /// Load search history for a user (initial load)
   Future<void> loadSearchHistory(String userId, {String? filterType}) async {
     try {
-      state = state.copyWith(isLoading: true, errorMessage: null);
+      state = state.copyWith(
+        isLoading: true,
+        errorMessage: null,
+        currentPage: 0,
+        hasMore: true,
+      );
 
       List<SearchHistory> history;
       if (filterType != null && filterType.isNotEmpty) {
-        history = await _service.getSearchHistoryByType(userId, filterType);
+        history = await _service.getSearchHistoryByType(
+          userId,
+          filterType,
+          limit: SearchHistoryState.pageSize,
+          offset: 0,
+        );
       } else {
-        history = await _service.getSearchHistory(userId);
+        history = await _service.getSearchHistory(
+          userId,
+          limit: SearchHistoryState.pageSize,
+          offset: 0,
+        );
       }
 
       state = state.copyWith(
         searchHistory: history,
         isLoading: false,
         filterType: filterType,
+        hasMore: history.length >= SearchHistoryState.pageSize,
+        currentPage: 1,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to load search history: $e',
+      );
+    }
+  }
+
+  /// Load more search history (pagination)
+  Future<void> loadMoreSearchHistory(String userId) async {
+    if (state.isLoadingMore || !state.hasMore) return;
+
+    try {
+      state = state.copyWith(isLoadingMore: true, errorMessage: null);
+
+      final offset = state.currentPage * SearchHistoryState.pageSize;
+      List<SearchHistory> moreHistory;
+
+      if (state.filterType != null && state.filterType!.isNotEmpty) {
+        moreHistory = await _service.getSearchHistoryByType(
+          userId,
+          state.filterType!,
+          limit: SearchHistoryState.pageSize,
+          offset: offset,
+        );
+      } else {
+        moreHistory = await _service.getSearchHistory(
+          userId,
+          limit: SearchHistoryState.pageSize,
+          offset: offset,
+        );
+      }
+
+      state = state.copyWith(
+        searchHistory: [...state.searchHistory, ...moreHistory],
+        isLoadingMore: false,
+        hasMore: moreHistory.length >= SearchHistoryState.pageSize,
+        currentPage: state.currentPage + 1,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingMore: false,
+        errorMessage: 'Failed to load more search history: $e',
       );
     }
   }
@@ -278,6 +346,11 @@ class SearchHistoryNotifier extends StateNotifier<SearchHistoryState> {
   /// Reset state
   void reset() {
     state = const SearchHistoryState();
+  }
+
+  /// Refresh search history (reload from beginning)
+  Future<void> refreshSearchHistory(String userId) async {
+    await loadSearchHistory(userId, filterType: state.filterType);
   }
 }
 

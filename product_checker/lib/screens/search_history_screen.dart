@@ -144,13 +144,26 @@ class _SearchHistoryScreenState extends ConsumerState<SearchHistoryScreen> {
         _buildStatsCard(historyState),
         // Search history list
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: historyState.searchHistory.length,
-            itemBuilder: (context, index) {
-              final history = historyState.searchHistory[index];
-              return _buildHistoryCard(history, authState.user!.id);
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (ScrollNotification scrollInfo) {
+              if (!historyState.isLoadingMore &&
+                  historyState.hasMore &&
+                  scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+                ref.read(searchHistoryProvider.notifier).loadMoreSearchHistory(authState.user!.id);
+              }
+              return false;
             },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: historyState.searchHistory.length + (historyState.hasMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == historyState.searchHistory.length) {
+                  return _buildLoadingIndicator();
+                }
+                final history = historyState.searchHistory[index];
+                return _buildHistoryCard(history, authState.user!.id);
+              },
+            ),
           ),
         ),
       ],
@@ -516,6 +529,15 @@ class _SearchHistoryScreenState extends ConsumerState<SearchHistoryScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const Padding(
+      padding: EdgeInsets.all(16.0),
+      child: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

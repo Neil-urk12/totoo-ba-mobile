@@ -8,12 +8,19 @@ class SavedRecordsState {
   final bool isLoading;
   final String? errorMessage;
   final bool isSaving;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final int currentPage;
+  static const int pageSize = 25;
 
   const SavedRecordsState({
     this.records = const [],
     this.isLoading = false,
     this.errorMessage,
     this.isSaving = false,
+    this.hasMore = true,
+    this.isLoadingMore = false,
+    this.currentPage = 0,
   });
 
   SavedRecordsState copyWith({
@@ -21,12 +28,18 @@ class SavedRecordsState {
     bool? isLoading,
     String? errorMessage,
     bool? isSaving,
+    bool? hasMore,
+    bool? isLoadingMore,
+    int? currentPage,
   }) {
     return SavedRecordsState(
       records: records ?? this.records,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       isSaving: isSaving ?? this.isSaving,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      currentPage: currentPage ?? this.currentPage,
     );
   }
 
@@ -44,19 +57,57 @@ class SavedRecordsNotifier extends StateNotifier<SavedRecordsState> {
 
   Future<void> loadSavedRecords(String userId) async {
     try {
-      state = state.copyWith(isLoading: true, errorMessage: null);
+      state = state.copyWith(
+        isLoading: true,
+        errorMessage: null,
+        currentPage: 0,
+        hasMore: true,
+      );
 
-      final records = await _service.getSavedRecords(userId);
+      final records = await _service.getSavedRecords(
+        userId,
+        limit: SavedRecordsState.pageSize,
+        offset: 0,
+      );
 
       state = state.copyWith(
         records: records,
         isLoading: false,
         errorMessage: null,
+        hasMore: records.length >= SavedRecordsState.pageSize,
+        currentPage: 1,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Failed to load saved records: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> loadMoreSavedRecords(String userId) async {
+    if (state.isLoadingMore || !state.hasMore) return;
+
+    try {
+      state = state.copyWith(isLoadingMore: true, errorMessage: null);
+
+      final offset = state.currentPage * SavedRecordsState.pageSize;
+      final moreRecords = await _service.getSavedRecords(
+        userId,
+        limit: SavedRecordsState.pageSize,
+        offset: offset,
+      );
+
+      state = state.copyWith(
+        records: [...state.records, ...moreRecords],
+        isLoadingMore: false,
+        hasMore: moreRecords.length >= SavedRecordsState.pageSize,
+        currentPage: state.currentPage + 1,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingMore: false,
+        errorMessage: 'Failed to load more saved records: ${e.toString()}',
       );
     }
   }
@@ -152,6 +203,10 @@ class SavedRecordsNotifier extends StateNotifier<SavedRecordsState> {
 
   void clearError() {
     state = state.copyWith(errorMessage: null);
+  }
+
+  Future<void> refreshSavedRecords(String userId) async {
+    await loadSavedRecords(userId);
   }
 }
 

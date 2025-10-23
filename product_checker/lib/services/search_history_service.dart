@@ -35,7 +35,7 @@ class SearchHistoryService {
   }
 
   /// Read: Get all search history for a user (sorted by most recent)
-  Future<List<SearchHistory>> getSearchHistory(String userId, {int? limit}) async {
+  Future<List<SearchHistory>> getSearchHistory(String userId, {int? limit, int offset = 0}) async {
     try {
       var query = _supabase
           .from('search_history')
@@ -44,7 +44,7 @@ class SearchHistoryService {
           .order('searched_at', ascending: false);
 
       if (limit != null) {
-        query = query.limit(limit);
+        query = query.range(offset, offset + limit - 1);
       }
 
       final response = await query;
@@ -63,6 +63,7 @@ class SearchHistoryService {
     String userId,
     String searchType, {
     int? limit,
+    int offset = 0,
   }) async {
     try {
       var query = _supabase
@@ -73,7 +74,7 @@ class SearchHistoryService {
           .order('searched_at', ascending: false);
 
       if (limit != null) {
-        query = query.limit(limit);
+        query = query.range(offset, offset + limit - 1);
       }
 
       final response = await query;
@@ -88,14 +89,14 @@ class SearchHistoryService {
   }
 
   /// Read: Get recent searches (last N searches)
-  Future<List<SearchHistory>> getRecentSearches(String userId, {int limit = 10}) async {
+  Future<List<SearchHistory>> getRecentSearches(String userId, {int limit = 10, int offset = 0}) async {
     try {
       final response = await _supabase
           .from('search_history')
           .select()
           .eq('user_id', userId)
           .order('searched_at', ascending: false)
-          .limit(limit);
+          .range(offset, offset + limit - 1);
 
       return (response as List)
           .map((record) => SearchHistory.fromMap(record))

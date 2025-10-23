@@ -17,32 +17,97 @@ final reportedProductsServiceProvider = Provider<ReportedProductsService>((ref) 
 });
 
 // Reports state provider
-final reportsStateProvider = StateNotifierProvider<ReportsNotifier, List<Report>>((ref) {
+final reportsStateProvider = StateNotifierProvider<ReportsNotifier, ReportsState>((ref) {
   final service = ref.watch(reportedProductsServiceProvider);
   return ReportsNotifier(service);
 });
 
 // Reports provider (now uses the state notifier)
 final reportsProvider = Provider<List<Report>>((ref) {
-  return ref.watch(reportsStateProvider);
+  return ref.watch(reportsStateProvider).reports;
 });
 
+// Reports state class
+class ReportsState {
+  final List<Report> reports;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final int currentPage;
+  static const int pageSize = 25;
+
+  const ReportsState({
+    this.reports = const [],
+    this.hasMore = true,
+    this.isLoadingMore = false,
+    this.currentPage = 0,
+  });
+
+  ReportsState copyWith({
+    List<Report>? reports,
+    bool? hasMore,
+    bool? isLoadingMore,
+    int? currentPage,
+  }) {
+    return ReportsState(
+      reports: reports ?? this.reports,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      currentPage: currentPage ?? this.currentPage,
+    );
+  }
+}
+
 // Reports Notifier class
-class ReportsNotifier extends StateNotifier<List<Report>> {
+class ReportsNotifier extends StateNotifier<ReportsState> {
   final ReportedProductsService _service;
 
-  ReportsNotifier(this._service) : super([]);
+  ReportsNotifier(this._service) : super(const ReportsState());
 
-  /// Load all reports from Supabase
+  /// Load all reports from Supabase (initial load)
   Future<void> loadAllReports() async {
-    final reports = await _service.getAllReports();
-    state = reports;
+    final reports = await _service.getAllReports(
+      limit: ReportsState.pageSize,
+      offset: 0,
+    );
+    state = ReportsState(
+      reports: reports,
+      hasMore: reports.length >= ReportsState.pageSize,
+      currentPage: 1,
+    );
+  }
+
+  /// Load more reports (pagination)
+  Future<void> loadMoreReports() async {
+    if (state.isLoadingMore || !state.hasMore) return;
+
+    state = state.copyWith(isLoadingMore: true);
+
+    final offset = state.currentPage * ReportsState.pageSize;
+    final moreReports = await _service.getAllReports(
+      limit: ReportsState.pageSize,
+      offset: offset,
+    );
+
+    state = state.copyWith(
+      reports: [...state.reports, ...moreReports],
+      isLoadingMore: false,
+      hasMore: moreReports.length >= ReportsState.pageSize,
+      currentPage: state.currentPage + 1,
+    );
   }
 
   /// Load reports for a specific user
   Future<void> loadUserReports(String userId) async {
-    final reports = await _service.getUserReports(userId);
-    state = reports;
+    final reports = await _service.getUserReports(
+      userId,
+      limit: ReportsState.pageSize,
+      offset: 0,
+    );
+    state = ReportsState(
+      reports: reports,
+      hasMore: reports.length >= ReportsState.pageSize,
+      currentPage: 1,
+    );
   }
 
   /// Create a new report
@@ -68,7 +133,7 @@ class ReportsNotifier extends StateNotifier<List<Report>> {
     );
 
     if (report != null) {
-      state = [report, ...state];
+      state = state.copyWith(reports: [report, ...state.reports]);
     }
 
     return report;
@@ -79,7 +144,9 @@ class ReportsNotifier extends StateNotifier<List<Report>> {
     final success = await _service.deleteReport(reportId);
     
     if (success) {
-      state = state.where((report) => report.id != reportId).toList();
+      state = state.copyWith(
+        reports: state.reports.where((report) => report.id != reportId).toList(),
+      );
     }
 
     return success;
@@ -87,18 +154,26 @@ class ReportsNotifier extends StateNotifier<List<Report>> {
 
   /// Update local state with a new report (for optimistic updates)
   void addReportLocally(Report report) {
-    state = [report, ...state];
+    state = state.copyWith(reports: [report, ...state.reports]);
   }
 
   /// Remove report from local state (for optimistic updates)
   void removeReportLocally(String reportId) {
-    state = state.where((report) => report.id != reportId).toList();
+    state = state.copyWith(
+      reports: state.reports.where((report) => report.id != reportId).toList(),
+    );
+  }
+
+  /// Refresh reports (reload from beginning)
+  Future<void> refreshReports() async {
+    await loadAllReports();
   }
 }
 
 // Filtered reports provider with memoization
 final filteredReportsProvider = Provider<List<Report>>((ref) {
-  final reports = ref.watch(reportsProvider);
+  final reportsState = ref.watch(reportsStateProvider);
+  final reports = reportsState.reports;
   final searchQuery = ref.watch(searchQueryProvider);
   final selectedSortOption = ref.watch(selectedSortOptionProvider);
 
@@ -119,6 +194,11 @@ final filteredReportsProvider = Provider<List<Report>>((ref) {
 
   // Apply sorting
   return _applySorting(filteredReports, selectedSortOption);
+});
+
+// Pagination state provider
+final reportsPaginationProvider = Provider<ReportsState>((ref) {
+  return ref.watch(reportsStateProvider);
 });
 
 // Helper function to apply sorting
