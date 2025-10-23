@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "⚠️ Report a Security Vulnerability"
+    url: "https://github.com/Neil-urk12/totoo-ba-backend/security/advisories/new"
+    about: "Please report security vulnerabilities privately and responsibly."
+  - name: "General Help & Support"
+    url: "https://github.com/Neil-urk12/totoo-ba-backend/readme.md"
+    about: "Need help with setup, configuration, or general questions?"

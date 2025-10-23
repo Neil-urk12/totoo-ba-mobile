@@ -1,0 +1,57 @@
+name: "Feature Request"
+description: Suggest a new idea or enhancement for this project
+title: "[FEATURE] A brief, clear title for your suggestion"
+labels: ["enhancement", "triage"]
+assignees: [Neil-urk12,Cezzyy]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a new feature! Please fill out the form below completely.
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: "🚀 Feature Description"
+      description: A clear and concise description of what the feature is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: "✅ Use Case / Why is this needed?"
+      description: |
+        Explain *why* this feature is important or useful. What specific scenario does it address for you or other users?
+
+        Example: "As a user, I need to [do X] but currently I have to [do Y, which is slow]. This feature would allow [Z]."
+    validations:
+      required: true
+
+  - type: input
+    id: similar-projects
+    attributes:
+      label: "🔗 Links / Examples (Optional)"
+      description: If possible, provide links to other projects that have similar functionality or design elements.
+      placeholder: e.g., https://example.com/other-project-feature
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: "📐 Estimated Complexity / Scope"
+      description: How complex do you think this feature would be to implement? (Your best guess is fine.)
+      options:
+        - Small (quick change, low risk)
+        - Medium (several files/components affected)
+        - Large (major overhaul, new infrastructure needed)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: "Code of Conduct & Contribution Guide"
+      description: By submitting this issue, you agree to follow our project's Code of Conduct and Contribution Guidelines.
+      options:
+        - label: "I agree to the terms listed above."
+          required: true
