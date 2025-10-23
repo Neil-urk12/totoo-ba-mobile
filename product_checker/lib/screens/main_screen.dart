@@ -5,7 +5,7 @@ import 'saved_screen.dart';
 import 'reports_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
-import '../providers/saved_records_provider.dart';
+import '../providers/navigation_provider.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -15,7 +15,6 @@ class MainScreen extends ConsumerStatefulWidget {
 }
 
 class _MainScreenState extends ConsumerState<MainScreen> {
-  int _currentIndex = 0;
   late final List<Widget> _screens;
 
   @override
@@ -28,26 +27,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       const ProfileScreen(),
       SettingScreen(
         onNavigateToProfile: () {
-          setState(() {
-            _currentIndex = 3;
-          });
+          ref.read(navigationProvider.notifier).navigateToProfile();
         },
       ),
     ];
   }
 
-  void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-    
-    if (index == 1) {
-      ref.read(resetSavedScreenProvider.notifier).state = !ref.read(resetSavedScreenProvider);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final navigationState = ref.watch(navigationProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Totoo Ba?'),
@@ -56,17 +45,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              setState(() {
-                _currentIndex = 4;
-              });
+              ref.read(navigationProvider.notifier).navigateToSettings();
             },
           ),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: _screens[navigationState.currentScreen.tabIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex < 4 ? _currentIndex : 0,
-        onTap: _onTabTapped,
+        currentIndex: navigationState.bottomNavIndex,
+        onTap: (index) {
+          ref.read(navigationProvider.notifier).onBottomNavTap(index);
+        },
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(

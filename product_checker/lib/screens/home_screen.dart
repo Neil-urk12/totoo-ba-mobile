@@ -4,7 +4,6 @@ import '../widgets/search_bar_widget.dart';
 import '../widgets/action_button_widget.dart';
 import 'image_search_screen.dart';
 import 'text_processing_screen.dart';
-import '../providers/text_search_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -20,12 +19,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Reset text search provider state when entering this screen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(textSearchProvider.notifier).reset();
-      }
-    });
+    // Navigation provider now handles state resets automatically
   }
 
   void _handleSearch(String query) {
@@ -34,21 +28,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
     
     if (query.trim().isNotEmpty) {
-      // Reset the provider state before navigation
-      ref.read(textSearchProvider.notifier).reset();
-      
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => TextProcessingScreen(
             searchQuery: query.trim(),
           ),
         ),
-      ).then((_) {
-        // Reset state again when returning from processing screen
-        if (mounted) {
-          ref.read(textSearchProvider.notifier).reset();
-        }
-      });
+      );
     }
   }
 
@@ -65,21 +51,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _errorText = null;
     });
     
-    // Reset the provider state before navigation
-    ref.read(textSearchProvider.notifier).reset();
-    
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TextProcessingScreen(
           searchQuery: _searchQuery.trim(),
         ),
       ),
-    ).then((_) {
-      // Reset state again when returning from processing screen
-      if (mounted) {
-        ref.read(textSearchProvider.notifier).reset();
-      }
-    });
+    );
   }
 
   void _handleTextChanged(String query) {
