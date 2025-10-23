@@ -241,21 +241,28 @@ class TextVerificationService {
     return allResults;
   }
 
-  /// Convert drug product results to GenericProduct
-  static List<GenericProduct> _convertDrugResults(List<Map<String, dynamic>> results) {
+  /// Generic conversion method for all product types
+  static List<GenericProduct> _convertResults(
+    List<Map<String, dynamic>> results,
+    String productType,
+    String Function(Map<String, dynamic>) getProductName,
+    String Function(Map<String, dynamic>) getDescription,
+    String? Function(Map<String, dynamic>) getManufacturer,
+    String? Function(Map<String, dynamic>) getGenericName,
+  ) {
     return results.map((result) => GenericProduct(
       id: result['id'] ?? result['registration_number'] ?? 'unknown',
-      productType: 'drug',
-      productName: result['generic_name'] ?? result['brand_name'],
+      productType: productType,
+      productName: getProductName(result),
       brandName: result['brand_name'],
-      manufacturer: result['manufacturer'],
+      manufacturer: getManufacturer(result),
       registrationNumber: result['registration_number'],
       licenseNumber: result['license_number'],
       documentTrackingNumber: result['document_tracking_number'],
-      description: result['generic_name'],
+      description: getDescription(result),
       confidence: _calculateConfidence(result),
       isVerified: true,
-      genericName: result['generic_name'],
+      genericName: getGenericName(result),
       dosageStrength: result['dosage_strength'],
       dosageForm: result['dosage_form'],
       classification: result['classification'],
@@ -265,84 +272,54 @@ class TextVerificationService {
       countryOfOrigin: result['country_of_origin'],
       applicantCompany: result['applicant_company'],
     )).toList();
+  }
+
+  /// Convert drug product results to GenericProduct
+  static List<GenericProduct> _convertDrugResults(List<Map<String, dynamic>> results) {
+    return _convertResults(
+      results,
+      'drug',
+      (result) => result['generic_name'] ?? result['brand_name'],
+      (result) => result['generic_name'],
+      (result) => result['manufacturer'],
+      (result) => result['generic_name'],
+    );
   }
 
   /// Convert food product results to GenericProduct
   static List<GenericProduct> _convertFoodResults(List<Map<String, dynamic>> results) {
-    return results.map((result) => GenericProduct(
-      id: result['id'] ?? result['registration_number'] ?? 'unknown',
-      productType: 'food',
-      productName: result['product_name'] ?? result['brand_name'],
-      brandName: result['brand_name'],
-      manufacturer: result['company_name'],
-      registrationNumber: result['registration_number'],
-      licenseNumber: result['license_number'],
-      documentTrackingNumber: result['document_tracking_number'],
-      description: result['product_name'],
-      confidence: _calculateConfidence(result),
-      isVerified: true,
-      genericName: result['product_name'],
-      dosageStrength: result['dosage_strength'],
-      dosageForm: result['dosage_form'],
-      classification: result['classification'],
-      pharmacologicCategory: result['pharmacologic_category'],
-      applicationType: result['application_type'],
-      packaging: result['packaging'],
-      countryOfOrigin: result['country_of_origin'],
-      applicantCompany: result['applicant_company'],
-    )).toList();
+    return _convertResults(
+      results,
+      'food',
+      (result) => result['product_name'] ?? result['brand_name'],
+      (result) => result['product_name'],
+      (result) => result['company_name'],
+      (result) => result['product_name'],
+    );
   }
 
   /// Convert cosmetic product results to GenericProduct
   static List<GenericProduct> _convertCosmeticResults(List<Map<String, dynamic>> results) {
-    return results.map((result) => GenericProduct(
-      id: result['id'] ?? result['registration_number'] ?? 'unknown',
-      productType: 'cosmetic',
-      productName: result['product_name'] ?? result['brand_name'],
-      brandName: result['brand_name'],
-      manufacturer: result['manufacturer'],
-      registrationNumber: result['registration_number'],
-      licenseNumber: result['license_number'],
-      documentTrackingNumber: result['document_tracking_number'],
-      description: result['product_name'],
-      confidence: _calculateConfidence(result),
-      isVerified: true,
-      genericName: result['product_name'],
-      dosageStrength: result['dosage_strength'],
-      dosageForm: result['dosage_form'],
-      classification: result['classification'],
-      pharmacologicCategory: result['pharmacologic_category'],
-      applicationType: result['application_type'],
-      packaging: result['packaging'],
-      countryOfOrigin: result['country_of_origin'],
-      applicantCompany: result['applicant_company'],
-    )).toList();
+    return _convertResults(
+      results,
+      'cosmetic',
+      (result) => result['product_name'] ?? result['brand_name'],
+      (result) => result['product_name'],
+      (result) => result['manufacturer'],
+      (result) => result['product_name'],
+    );
   }
 
   /// Convert medical device product results to GenericProduct
   static List<GenericProduct> _convertMedicalDeviceResults(List<Map<String, dynamic>> results) {
-    return results.map((result) => GenericProduct(
-      id: result['id'] ?? result['registration_number'] ?? 'unknown',
-      productType: 'medical_device',
-      productName: result['product_name'] ?? result['brand_name'],
-      brandName: result['brand_name'],
-      manufacturer: result['manufacturer'],
-      registrationNumber: result['registration_number'],
-      licenseNumber: result['license_number'],
-      documentTrackingNumber: result['document_tracking_number'],
-      description: result['product_name'],
-      confidence: _calculateConfidence(result),
-      isVerified: true,
-      genericName: result['product_name'],
-      dosageStrength: result['dosage_strength'],
-      dosageForm: result['dosage_form'],
-      classification: result['classification'],
-      pharmacologicCategory: result['pharmacologic_category'],
-      applicationType: result['application_type'],
-      packaging: result['packaging'],
-      countryOfOrigin: result['country_of_origin'],
-      applicantCompany: result['applicant_company'],
-    )).toList();
+    return _convertResults(
+      results,
+      'medical_device',
+      (result) => result['product_name'] ?? result['brand_name'],
+      (result) => result['product_name'],
+      (result) => result['manufacturer'],
+      (result) => result['product_name'],
+    );
   }
 
   /// Calculate confidence score based on search result metadata

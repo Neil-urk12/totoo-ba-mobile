@@ -126,17 +126,4 @@ extension FoodProductStatusExtension on FoodProductStatus {
         return 'Unknown';
     }
   }
-
-  String get colorCode {
-    switch (this) {
-      case FoodProductStatus.active:
-        return 'green';
-      case FoodProductStatus.expiringSoon:
-        return 'orange';
-      case FoodProductStatus.expired:
-        return 'red';
-      case FoodProductStatus.unknown:
-        return 'gray';
-    }
-  }
 }
