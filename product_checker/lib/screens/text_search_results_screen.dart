@@ -250,31 +250,144 @@ class TextSearchResultsScreen extends ConsumerWidget {
           
           // Show additional results if available
           if (provider.searchResults.length > 1) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               'Additional Matches',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            // Horizontal scrollable list of additional matches
             SizedBox(
-              height: 280, // Increased height from 200 to 280
+              height: 240,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: provider.searchResults.length - 1,
                 itemBuilder: (context, index) {
                   final product = provider.searchResults[index + 1];
                   return Container(
-                    width: 280,
+                    width: 300,
                     margin: EdgeInsets.only(
-                      right: index < provider.searchResults.length - 2 ? 8 : 0, // Reduced spacing between cards
-                      left: index == 0 ? 0 : 4, // Small left margin for non-first items
+                      right: index < provider.searchResults.length - 2 ? 16 : 0,
                     ),
-                    child: GenericProductCard(
-                      product: product,
-                      onTap: () => _showProductDetails(context, product),
-                      searchType: 'text',
+                    child: Card(
+                      child: InkWell(
+                        onTap: () => _showProductDetails(context, product),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header with verification status
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.blue.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      product.productTypeDisplay,
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: product.isVerified 
+                                          ? Colors.green.withValues(alpha: 0.1)
+                                          : Colors.red.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: product.isVerified 
+                                            ? Colors.green.withValues(alpha: 0.3)
+                                            : Colors.red.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          product.isVerified ? Icons.verified : Icons.warning,
+                                          size: 12,
+                                          color: product.isVerified ? Colors.green : Colors.red,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          product.isVerified ? 'Verified' : 'Not Verified',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: product.isVerified ? Colors.green : Colors.red,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              // Product name
+                              Text(
+                                product.displayName,
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              
+                              // Key details
+                              if (product.manufacturer != null) ...[
+                                _buildCompactDetailRow(context, Icons.business, product.manufacturer!),
+                                const SizedBox(height: 4),
+                              ],
+                              if (product.registrationNumber != null) ...[
+                                _buildCompactDetailRow(context, Icons.assignment, product.registrationNumber!),
+                                const SizedBox(height: 4),
+                              ],
+                              if (product.dosageForm != null) ...[
+                                _buildCompactDetailRow(context, Icons.medication, product.dosageForm!),
+                                const SizedBox(height: 4),
+                              ],
+                              
+                              const Spacer(),
+                              
+                              // Confidence score
+                              if (product.confidence != null) ...[
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.analytics_outlined,
+                                      size: 14,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Confidence: ${_formatConfidence(product.confidence!)}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -564,6 +677,33 @@ class TextSearchResultsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildCompactDetailRow(BuildContext context, IconData icon, String value) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 14,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatConfidence(double confidence) {
+    return '${(confidence * 100).round()}%';
   }
 
   void _navigateToReportForm(BuildContext context, TextSearchStateModel provider) {

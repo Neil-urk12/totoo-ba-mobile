@@ -102,7 +102,6 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
 
     // Generate unique search ID for this search instance
     final searchId = DateTime.now().millisecondsSinceEpoch.toString();
-    print('TextSearchProvider: Starting new search with ID: $searchId, query: "$query"');
     
     // Clear previous state and start fresh
     state = state.copyWith(
@@ -141,7 +140,6 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
       final searchResultType = _determineSearchResult(searchResults);
       
       // Complete when search is actually done and results are ready
-      print('TextSearchProvider: Search completed successfully (searchId: $searchId)');
       state = state.copyWith(
         state: TextSearchState.completed,
         searchResults: searchResults,
@@ -154,7 +152,6 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
         currentProcessingMessage: 'Search completed successfully',
       );
     } catch (e) {
-      print('TextSearchProvider: Search failed (searchId: $searchId), error: $e');
       _setError('Error searching product: $e');
     }
   }
@@ -222,7 +219,6 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
   }
 
   void reset() {
-    print('TextSearchProvider: Resetting state from ${state.state} (searchId: ${state.searchId})');
     state = const TextSearchStateModel(
       state: TextSearchState.idle,
       searchQuery: '',
@@ -237,7 +233,6 @@ class TextSearchNotifier extends StateNotifier<TextSearchStateModel> {
       resultMessage: null,
       searchId: '',
     );
-    print('TextSearchProvider: State reset complete');
   }
 
   void cancelProcessing() {

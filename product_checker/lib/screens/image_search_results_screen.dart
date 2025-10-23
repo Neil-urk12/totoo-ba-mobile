@@ -232,15 +232,16 @@ class ImageSearchResultsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            // Horizontal scrollable list of alternative matches
             SizedBox(
-              height: 200, // Fixed height for horizontal scroll
+              height: 240,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: alternativeMatches.length,
                 itemBuilder: (context, index) {
                   final product = alternativeMatches[index];
                   return Container(
-                    width: 280, // Fixed width for each card
+                    width: 300,
                     margin: EdgeInsets.only(
                       right: index < alternativeMatches.length - 1 ? 16 : 0,
                     ),

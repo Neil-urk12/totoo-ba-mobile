@@ -37,11 +37,9 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
 
   void _startProcessing() {
     if (_hasStartedProcessing) {
-      print('TextProcessingScreen: Processing already started, skipping');
       return;
     }
     
-    print('TextProcessingScreen: Starting processing for query: "${widget.searchQuery}"');
     _hasStartedProcessing = true;
     final notifier = ref.read(textSearchProvider.notifier);
     
@@ -54,18 +52,15 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
 
   void _navigateToResults() {
     if (_hasNavigated) {
-      print('TextProcessingScreen: Navigation already occurred, skipping');
       return;
     }
     
-    print('TextProcessingScreen: Navigating to results for query: "${widget.searchQuery}"');
     _hasNavigated = true;
     
     final navigator = Navigator.of(context);
     
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
-        print('TextProcessingScreen: Executing navigation to TextSearchResultsScreen');
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (context) => TextSearchResultsScreen(
@@ -74,8 +69,6 @@ class _TextProcessingScreenState extends ConsumerState<TextProcessingScreen> {
             ),
           ),
         );
-      } else {
-        print('TextProcessingScreen: Widget not mounted, skipping navigation');
       }
     });
   }
