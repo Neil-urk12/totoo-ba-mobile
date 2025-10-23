@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/saved_records_provider.dart';
-import '../widgets/generic_product_card.dart';
-import '../models/generic_product.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/saved_record_card.dart';
+import '../models/saved_record.dart';
 
 class SavedScreen extends ConsumerStatefulWidget {
   const SavedScreen({super.key});
@@ -19,11 +20,30 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
   @override
   void initState() {
     super.initState();
-    // Clear search state when screen is initialized
+    // Load saved records and clear search state when screen is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedRecords();
       _clearSearchState();
-      _simulateLoading();
     });
+  }
+
+  Future<void> _loadSavedRecords() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Get user ID from auth provider
+    final authState = ref.read(authProvider);
+    final userId = authState.user?.id ?? 'default_user';
+
+    // Load saved records from Supabase
+    await ref.read(savedRecordsProvider.notifier).loadSavedRecords(userId);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -48,21 +68,6 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
       
       // Force a rebuild to reflect the cleared state
       setState(() {});
-    }
-  }
-
-  Future<void> _simulateLoading() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    // Minimal delay for smooth transition
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -167,15 +172,14 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                       : filteredRecords.isEmpty
                           ? _buildNoResultsState(context)
                           : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              padding: EdgeInsets.zero,
                               itemCount: filteredRecords.length,
                               itemBuilder: (context, index) {
                                 final record = filteredRecords[index];
-                                final product = record.toGenericProduct();
-                                return GenericProductCard(
-                                  product: product,
-                                  onTap: () => _showProductDetails(context, product),
-                                  searchType: record.searchType,
+                                return SavedRecordCard(
+                                  record: record,
+                                  onTap: () => _showRecordDetails(context, record),
+                                  onDelete: () => _confirmDelete(context, record),
                                 );
                               },
                             ),
@@ -451,7 +455,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     );
   }
 
-  void _showProductDetails(BuildContext context, GenericProduct product) {
+  void _showRecordDetails(BuildContext context, SavedRecord record) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -489,7 +493,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Drug Product Details',
+                          'Saved Product Details',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -516,31 +520,10 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                           _buildDetailSection(
                             'Product Information',
                             [
-                              _buildDetailRow('Generic Name', product.genericName),
-                              _buildDetailRow('Brand Name', product.brandName),
-                              _buildDetailRow('Registration Number', product.registrationNumber),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Dosage Information
-                          _buildDetailSection(
-                            'Dosage Information',
-                            [
-                              _buildDetailRow('Dosage Strength', product.dosageStrength),
-                              _buildDetailRow('Dosage Form', product.dosageForm),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Classification Information
-                          _buildDetailSection(
-                            'Classification Information',
-                            [
-                              _buildDetailRow('Classification', product.classification),
-                              _buildDetailRow('Pharmacologic Category', product.pharmacologicCategory),
+                              _buildDetailRow('Product Name', record.productName),
+                              _buildDetailRow('Brand Name', record.brandName),
+                              _buildDetailRow('Generic Name', record.genericName),
+                              _buildDetailRow('Registration Number', record.registrationNumber),
                             ],
                           ),
 
@@ -550,28 +533,31 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
                           _buildDetailSection(
                             'Manufacturer Information',
                             [
-                              _buildDetailRow('Manufacturer', product.manufacturer),
-                              _buildDetailRow('Country of Origin', product.countryOfOrigin),
-                              _buildDetailRow('Application Type', product.applicationType),
+                              _buildDetailRow('Manufacturer', record.manufacturer),
                             ],
                           ),
 
                           const SizedBox(height: 20),
 
-                          // Status Information
+                          // Verification Status
                           _buildDetailSection(
-                            'Status Information',
+                            'Verification Status',
                             [
-                              _buildDetailRow('Status', product.status),
-                              _buildDetailRow('Issuance Date', 
-                                  product.issuanceDate != null 
-                                      ? '${product.issuanceDate!.day}/${product.issuanceDate!.month}/${product.issuanceDate!.year}'
-                                      : null),
-                              _buildDetailRow('Expiry Date', 
-                                  product.expiryDate != null 
-                                      ? '${product.expiryDate!.day}/${product.expiryDate!.month}/${product.expiryDate!.year}'
-                                      : null),
-                              _buildDetailRow('Days Until Expiry', '${product.daysUntilExpiry} days'),
+                              _buildDetailRow('Status', record.isVerified ? 'Verified' : 'Not Verified'),
+                              if (record.confidence != null)
+                                _buildDetailRow('Confidence', '${(record.confidence! * 100).round()}%'),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Search Information
+                          _buildDetailSection(
+                            'Search Information',
+                            [
+                              _buildDetailRow('Search Type', record.searchType.toUpperCase()),
+                              _buildDetailRow('Saved Date', 
+                                  '${record.savedAt.day}/${record.savedAt.month}/${record.savedAt.year} ${record.savedAt.hour}:${record.savedAt.minute.toString().padLeft(2, '0')}'),
                             ],
                           ),
 
@@ -635,5 +621,52 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, SavedRecord record) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Saved Product'),
+        content: Text('Are you sure you want to delete "${record.productName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      final success = await ref.read(savedRecordsProvider.notifier).removeProduct(record.productId);
+      
+      if (context.mounted) {
+        if (success) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Product removed from saved records'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Failed to remove product'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }
