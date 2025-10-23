@@ -45,7 +45,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     final themeMode = ref.watch(themeModeProvider);
     
     return MaterialApp(
-      title: 'Totoo Ba?',
+      title: 'Totoo ba ito?',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,

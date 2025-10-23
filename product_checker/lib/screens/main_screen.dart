@@ -39,7 +39,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Totoo Ba?'),
+        title: const Text('Totoo ba ito?'),
         centerTitle: true,
         actions: [
           IconButton(
