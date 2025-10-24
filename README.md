@@ -19,7 +19,7 @@ See the other parts of the project here:
 ## Features
 
 - **ID-based Verification**: Check products by registration numbers, license numbers, or tracking numbers
-- **AI Image Verification**: Upload product images for AI-powered extraction and verification using Google's Gemini
+- **AI Image Verification**: Upload product images for AI-powered extraction and verification using Groq Vision
 - **Fuzzy Matching**: Intelligent matching with multiple scoring algorithms
 - **Multi-category Support**: Handles drugs, food, medical devices, cosmetics, and establishments
 - **RESTful API**: Clean API endpoints with proper error handling and documentation
