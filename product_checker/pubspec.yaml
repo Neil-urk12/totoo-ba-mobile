@@ -76,7 +76,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   
   # App icon generator
-  flutter_launcher_icons: ^0.14.1
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -124,5 +124,6 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "app_icon.png"
-  adaptive_icon_background: "#2E7D32"
+  adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "app_icon.png"
+  remove_alpha_ios: true
