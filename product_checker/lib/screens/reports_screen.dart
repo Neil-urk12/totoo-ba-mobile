@@ -174,49 +174,37 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: ref.read(selectedSortOptionProvider),
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
+                      child: GestureDetector(
+                        onTap: () => _showSortOptionsBottomSheet(context, controller),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(
                               color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                             ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                            ),
+                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 2,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  ref.watch(selectedSortOptionProvider),
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ],
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                         ),
-                        dropdownColor: Theme.of(context).colorScheme.surface,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        items: ref.watch(reportSortOptionsProvider).map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(
-                              value,
-                              style: const TextStyle(fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          controller.updateSortOption(value!);
-                        },
                       ),
                     ),
                   ],
@@ -463,7 +451,72 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-
+  void _showSortOptionsBottomSheet(BuildContext context, ReportsScreenController controller) {
+    final sortOptions = ref.read(reportSortOptionsProvider);
+    final currentSort = ref.read(selectedSortOptionProvider);
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Sort By',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: sortOptions.map((option) {
+                  final isSelected = currentSort == option;
+                  return ListTile(
+                    title: Text(
+                      option,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    trailing: isSelected 
+                        ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                        : null,
+                    onTap: () {
+                      controller.updateSortOption(option);
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildSkeletonLoading() {
     return ListView.builder(

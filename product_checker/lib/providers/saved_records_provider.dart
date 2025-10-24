@@ -227,7 +227,13 @@ final availableStatusesProvider = Provider<List<String>>((ref) {
 
 final availableCategoriesProvider = Provider<List<String>>((ref) {
   final records = ref.watch(savedRecordsProvider).records;
-  final categories = records.map((record) => record.searchType).toSet().toList();
+  final categories = records.map((record) {
+    // Capitalize first letter of search type
+    final searchType = record.searchType;
+    return searchType.isEmpty 
+        ? searchType 
+        : searchType[0].toUpperCase() + searchType.substring(1);
+  }).toSet().toList();
   categories.insert(0, 'All');
   return categories;
 });
@@ -268,7 +274,8 @@ final filteredRecordsProvider = Provider<List<SavedRecord>>((ref) {
 
     // Category filter (by search type)
     if (selectedCategory != 'All') {
-      if (record.searchType != selectedCategory) {
+      // Compare lowercase versions since selectedCategory is capitalized
+      if (record.searchType.toLowerCase() != selectedCategory.toLowerCase()) {
         return false;
       }
     }
