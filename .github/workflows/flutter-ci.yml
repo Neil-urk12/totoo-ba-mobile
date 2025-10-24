@@ -1,0 +1,69 @@
+name: "Flutter CI (analyze • test)"
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - "product_checker/lib/**"
+      - "product_checker/test/**"
+      - "product_checker/pubspec.yaml"
+      - "product_checker/pubspec.lock"
+      - "product_checker/analysis_options.yaml"
+      - ".github/workflows/**"
+  push:
+    branches: [ main, develop ]
+    paths:
+      - "product_checker/lib/**"
+      - "product_checker/test/**"
+      - "product_checker/pubspec.yaml"
+      - "product_checker/pubspec.lock"
+      - "product_checker/analysis_options.yaml"
+      - ".github/workflows/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Run all shell steps inside the Flutter project
+defaults:
+  run:
+    working-directory: product_checker
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show tool versions
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('product_checker/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests (no coverage)
+        run: flutter test --no-pub
