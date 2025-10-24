@@ -25,7 +25,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.initState();
 
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
 
@@ -52,9 +52,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     _controller.forward();
 
-    // Navigate to main screen after animation
-    Timer(const Duration(milliseconds: 2500), () {
-      widget.onComplete();
+    // Navigate to main screen after animation - let AnimatedSwitcher handle the fade
+    Timer(const Duration(milliseconds: 3500), () {
+      if (mounted) {
+        widget.onComplete();
+      }
     });
   }
 

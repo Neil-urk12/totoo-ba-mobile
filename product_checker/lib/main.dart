@@ -49,9 +49,25 @@ class _MyAppState extends ConsumerState<MyApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      home: _showOnboarding
-          ? OnboardingScreen(onComplete: _completeOnboarding)
-          : const MainScreen(),
+      home: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        child: _showOnboarding
+            ? OnboardingScreen(
+                key: const ValueKey('onboarding'),
+                onComplete: _completeOnboarding,
+              )
+            : const MainScreen(
+                key: ValueKey('main'),
+              ),
+      ),
       debugShowCheckedModeBanner: false,
       routes: {
         '/search-history': (context) => const SearchHistoryScreen(),
