@@ -168,36 +168,46 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
               child: _isLoading
                   ? _buildSkeletonLoading(context)
                   : allRecords.isEmpty
-                      ? _buildEmptyState(context)
+                      ? RefreshIndicator(
+                          onRefresh: _loadSavedRecords,
+                          child: _buildEmptyState(context),
+                        )
                       : filteredRecords.isEmpty
-                          ? _buildNoResultsState(context)
-                          : NotificationListener<ScrollNotification>(
-                              onNotification: (ScrollNotification scrollInfo) {
-                                final savedState = ref.read(savedRecordsProvider);
-                                if (!savedState.isLoadingMore &&
-                                    savedState.hasMore &&
-                                    scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
-                                  final authState = ref.read(authProvider);
-                                  if (authState.user != null) {
-                                    ref.read(savedRecordsProvider.notifier).loadMoreSavedRecords(authState.user!.id);
+                          ? RefreshIndicator(
+                              onRefresh: _loadSavedRecords,
+                              child: _buildNoResultsState(context),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: _loadSavedRecords,
+                              child: NotificationListener<ScrollNotification>(
+                                onNotification: (ScrollNotification scrollInfo) {
+                                  final savedState = ref.read(savedRecordsProvider);
+                                  if (!savedState.isLoadingMore &&
+                                      savedState.hasMore &&
+                                      scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+                                    final authState = ref.read(authProvider);
+                                    if (authState.user != null) {
+                                      ref.read(savedRecordsProvider.notifier).loadMoreSavedRecords(authState.user!.id);
+                                    }
                                   }
-                                }
-                                return false;
-                              },
-                              child: ListView.builder(
-                                padding: EdgeInsets.zero,
-                                itemCount: filteredRecords.length + (ref.watch(savedRecordsProvider).hasMore ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (index == filteredRecords.length) {
-                                    return _buildLoadingIndicator();
-                                  }
-                                  final record = filteredRecords[index];
-                                  return SavedRecordCard(
-                                    record: record,
-                                    onTap: () => _showRecordDetails(context, record),
-                                    onDelete: () => _confirmDelete(context, record),
-                                  );
+                                  return false;
                                 },
+                                child: ListView.builder(
+                                  padding: EdgeInsets.zero,
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  itemCount: filteredRecords.length + (ref.watch(savedRecordsProvider).hasMore ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    if (index == filteredRecords.length) {
+                                      return _buildLoadingIndicator();
+                                    }
+                                    final record = filteredRecords[index];
+                                    return SavedRecordCard(
+                                      record: record,
+                                      onTap: () => _showRecordDetails(context, record),
+                                      onDelete: () => _confirmDelete(context, record),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
             ),
@@ -363,58 +373,64 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
 
   Widget _buildEmptyState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.bookmark_border,
-            size: 80,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Saved Drug Products',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bookmark_border,
+              size: 80,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Start adding drug products to save them here',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            const SizedBox(height: 16),
+            Text(
+              'No Saved Drug Products',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Start adding drug products to save them here',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNoResultsState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 80,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Results Found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 80,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Try adjusting your search or filters',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            const SizedBox(height: 16),
+            Text(
+              'No Results Found',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'Try adjusting your search or filters',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

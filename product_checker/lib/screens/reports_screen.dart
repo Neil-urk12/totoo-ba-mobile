@@ -225,57 +225,67 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Widget _buildReportsList(List<Report> filteredReports) {
     if (filteredReports.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.report_problem_outlined,
-              size: 64,
-              color: Colors.grey[400],
+      return RefreshIndicator(
+        onRefresh: _loadReports,
+        child: Center(
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.report_problem_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No reports found',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Try adjusting your filters or search query',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No reports found',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adjusting your filters or search query',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
+          ),
         ),
       );
     }
 
     final reportsState = ref.watch(reportsStateProvider);
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification scrollInfo) {
-        if (!reportsState.isLoadingMore &&
-            reportsState.hasMore &&
-            scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
-          ref.read(reportsStateProvider.notifier).loadMoreReports();
-        }
-        return false;
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 16),
-        itemCount: filteredReports.length + (reportsState.hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == filteredReports.length) {
-            return _buildPaginationLoadingIndicator();
+    return RefreshIndicator(
+      onRefresh: _loadReports,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scrollInfo) {
+          if (!reportsState.isLoadingMore &&
+              reportsState.hasMore &&
+              scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+            ref.read(reportsStateProvider.notifier).loadMoreReports();
           }
-          final report = filteredReports[index];
-          return ReportCardWidget(
-            report: report,
-            onTap: () => _showReportDetails(report, ref.read(reportsScreenControllerProvider.notifier)),
-          );
+          return false;
         },
+        child: ListView.builder(
+          padding: const EdgeInsets.only(bottom: 16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: filteredReports.length + (reportsState.hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == filteredReports.length) {
+              return _buildPaginationLoadingIndicator();
+            }
+            final report = filteredReports[index];
+            return ReportCardWidget(
+              report: report,
+              onTap: () => _showReportDetails(report, ref.read(reportsScreenControllerProvider.notifier)),
+            );
+          },
+        ),
       ),
     );
   }
