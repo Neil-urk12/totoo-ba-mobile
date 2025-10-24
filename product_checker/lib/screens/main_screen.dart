@@ -1,65 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home_screen.dart';
 import 'saved_screen.dart';
 import 'reports_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
+import '../providers/navigation_provider.dart';
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
+class _MainScreenState extends ConsumerState<MainScreen> {
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const SavedScreen(),
-    const ReportsScreen(),
-    const ProfileScreen(),
-    const SettingScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      const HomeScreen(),
+      const SavedScreen(),
+      const ReportsScreen(),
+      const ProfileScreen(),
+      SettingScreen(
+        onNavigateToProfile: () {
+          ref.read(navigationProvider.notifier).navigateToProfile();
+        },
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final navigationState = ref.watch(navigationProvider);
+    
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'LigmaCheck',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: const Text('Totoo ba ito?'),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black),
+            icon: const Icon(Icons.settings),
             onPressed: () {
-              setState(() {
-                _currentIndex = 4;
-              });
+              ref.read(navigationProvider.notifier).navigateToSettings();
             },
           ),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: _screens[navigationState.currentScreen.tabIndex],
       bottomNavigationBar: BottomNavigationBar(
-         currentIndex: _currentIndex < 4 ? _currentIndex : 0,
+        currentIndex: navigationState.bottomNavIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          ref.read(navigationProvider.notifier).onBottomNavTap(index);
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
