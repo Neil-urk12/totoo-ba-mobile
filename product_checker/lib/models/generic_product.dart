@@ -187,6 +187,21 @@ class GenericProduct {
           return brandName!;
         }
         break;
+      case 'unknown':
+      default:
+        // For unknown types, try to find any available name
+        if (productName != null && brandName != null) {
+          return '$productName ($brandName)';
+        } else if (productName != null) {
+          return productName!;
+        } else if (brandName != null) {
+          return brandName!;
+        } else if (genericName != null) {
+          return genericName!;
+        } else if (nameOfEstablishment != null) {
+          return nameOfEstablishment!;
+        }
+        break;
     }
     return id;
   }

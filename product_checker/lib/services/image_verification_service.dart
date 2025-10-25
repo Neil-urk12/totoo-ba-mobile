@@ -107,12 +107,20 @@ class ProductVerificationResponse {
 
   // Convert to GenericProduct for unified handling
   GenericProduct toGenericProduct() {
+    final type = productType ?? 'unknown';
+    
+    // Only set genericName for drug products and drug applications
+    final shouldIncludeGenericName = type == 'drug' || type == 'drug_application';
+    
+    // For food products, use company_name as manufacturer
+    final effectiveManufacturer = type == 'food' ? (companyName ?? manufacturer) : manufacturer;
+    
     return GenericProduct(
       id: registrationNumber ?? licenseNumber ?? documentTrackingNumber ?? 'unknown',
-      productType: productType ?? 'unknown',
+      productType: type,
       productName: productName,
       brandName: brandName,
-      manufacturer: manufacturer,
+      manufacturer: effectiveManufacturer,
       registrationNumber: registrationNumber,
       licenseNumber: licenseNumber,
       documentTrackingNumber: documentTrackingNumber,
@@ -130,11 +138,11 @@ class ProductVerificationResponse {
       activity: activity,
       companyName: companyName,
       typeOfProduct: typeOfProduct,
-      genericName: genericName,
-      dosageStrength: dosageStrength,
-      dosageForm: dosageForm,
-      classification: classification,
-      pharmacologicCategory: pharmacologicCategory,
+      genericName: shouldIncludeGenericName ? genericName : null,
+      dosageStrength: shouldIncludeGenericName ? dosageStrength : null,
+      dosageForm: shouldIncludeGenericName ? dosageForm : null,
+      classification: shouldIncludeGenericName ? classification : null,
+      pharmacologicCategory: shouldIncludeGenericName ? pharmacologicCategory : null,
       applicationType: applicationType,
       packaging: packaging,
       countryOfOrigin: countryOfOrigin,

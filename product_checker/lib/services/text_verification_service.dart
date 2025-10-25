@@ -288,14 +288,21 @@ class TextVerificationService {
 
   /// Convert food product results to GenericProduct
   static List<GenericProduct> _convertFoodResults(List<Map<String, dynamic>> results) {
-    return _convertResults(
-      results,
-      'food',
-      (result) => result['product_name'] ?? result['brand_name'],
-      (result) => result['product_name'],
-      (result) => result['company_name'],
-      (result) => result['product_name'],
-    );
+    return results.map((result) => GenericProduct(
+      id: result['id'] ?? result['registration_number'] ?? 'unknown',
+      productType: 'food',
+      productName: result['product_name'],
+      brandName: result['brand_name'],
+      manufacturer: result['company_name'],
+      registrationNumber: result['registration_number'],
+      description: result['product_name'],
+      confidence: _calculateConfidence(result),
+      isVerified: true,
+      companyName: result['company_name'],
+      typeOfProduct: result['type_of_product'],
+      issuanceDate: result['issuance_date'] != null ? DateTime.tryParse(result['issuance_date']) : null,
+      expiryDate: result['expiry_date'] != null ? DateTime.tryParse(result['expiry_date']) : null,
+    )).toList();
   }
 
   /// Convert cosmetic product results to GenericProduct
@@ -306,7 +313,7 @@ class TextVerificationService {
       (result) => result['product_name'] ?? result['brand_name'],
       (result) => result['product_name'],
       (result) => result['manufacturer'],
-      (result) => result['product_name'],
+      (result) => null, // Cosmetic products don't have genericName
     );
   }
 
@@ -318,7 +325,7 @@ class TextVerificationService {
       (result) => result['product_name'] ?? result['brand_name'],
       (result) => result['product_name'],
       (result) => result['manufacturer'],
-      (result) => result['product_name'],
+      (result) => null, // Medical device products don't have genericName
     );
   }
 
