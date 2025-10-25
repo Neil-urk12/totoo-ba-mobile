@@ -313,9 +313,15 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
         }
 
         // Create a properly verified GenericProduct with correct isVerified status
+        // Use productType from genericProduct (already determined by toGenericProduct method)
+        // or fall back to _determineProductType if genericProduct.productType is 'unknown'
+        final determinedProductType = (genericProduct.productType == 'unknown' || genericProduct.productType.isEmpty)
+            ? _determineProductType(verificationResponse)
+            : genericProduct.productType;
+        
         final verifiedGenericProduct = GenericProduct(
           id: genericProduct.id,
-          productType: _determineProductType(verificationResponse),
+          productType: determinedProductType,
           productName: genericProduct.productName,
           brandName: genericProduct.brandName,
           manufacturer: genericProduct.manufacturer,
@@ -467,16 +473,31 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
   }
 
   String _determineProductType(ProductVerificationResponse response) {
-    // Try to determine product type from backend response
-    if (response.productType != null && response.productType != 'unknown') {
+    // Try to determine product type from backend response (matched_product)
+    if (response.productType != null && response.productType != 'unknown' && response.productType!.isNotEmpty) {
       return response.productType!;
     }
     
     // Fallback: analyze extracted fields to determine type
     final extractedFields = response.extractedFields;
+    final matchedProduct = response.matchedProduct;
+    
+    // First check if matched product has type information
+    if (matchedProduct != null && matchedProduct['product_type'] != null && matchedProduct['product_type'] != 'unknown') {
+      return matchedProduct['product_type'];
+    }
+    
     if (extractedFields != null) {
       final productDescription = extractedFields['product_description']?.toString().toLowerCase() ?? '';
       final brandName = extractedFields['brand_name']?.toString().toLowerCase() ?? '';
+      final registrationNumber = extractedFields['registration_number']?.toString().toUpperCase() ?? '';
+      
+      // Check registration number pattern (e.g., FR-XXXXXX for food)
+      if (registrationNumber.startsWith('FR-')) {
+        return 'food';
+      } else if (registrationNumber.startsWith('DR-') || registrationNumber.startsWith('CPR-')) {
+        return 'drug';
+      }
       
       // Check for drug-related keywords
       if (productDescription.contains('syrup') || 
@@ -484,11 +505,17 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
           productDescription.contains('capsule') ||
           productDescription.contains('injection') ||
           productDescription.contains('drops') ||
+          productDescription.contains('mg') ||
+          productDescription.contains('ml') ||
           productDescription.contains('phenylephrine') ||
           productDescription.contains('chlorphenamine') ||
           productDescription.contains('maleate') ||
+          productDescription.contains('paracetamol') ||
+          productDescription.contains('ibuprofen') ||
           brandName.contains('neozep') ||
-          brandName.contains('forte')) {
+          brandName.contains('forte') ||
+          brandName.contains('med') ||
+          brandName.contains('pharma')) {
         return 'drug';
       }
       
@@ -496,7 +523,14 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
       if (productDescription.contains('food') ||
           productDescription.contains('snack') ||
           productDescription.contains('beverage') ||
-          productDescription.contains('drink')) {
+          productDescription.contains('drink') ||
+          productDescription.contains('juice') ||
+          productDescription.contains('coffee') ||
+          productDescription.contains('tea') ||
+          productDescription.contains('candy') ||
+          productDescription.contains('chocolate') ||
+          productDescription.contains('biscuit') ||
+          productDescription.contains('cookie')) {
         return 'food';
       }
       
@@ -504,13 +538,21 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
       if (productDescription.contains('cosmetic') ||
           productDescription.contains('beauty') ||
           productDescription.contains('skincare') ||
-          productDescription.contains('makeup')) {
+          productDescription.contains('makeup') ||
+          productDescription.contains('lotion') ||
+          productDescription.contains('cream') ||
+          productDescription.contains('shampoo')) {
         return 'cosmetic';
       }
     }
     
-    // Default to drug if we have pharmaceutical ingredients
-    return 'drug';
+    // If we have a matched product but no type, it's likely a drug (most common in database)
+    if (matchedProduct != null && matchedProduct.isNotEmpty) {
+      return 'drug';
+    }
+    
+    // Default to unknown if we can't determine
+    return 'unknown';
   }
 
   List<GenericProduct> _createAlternativeMatches(ProductVerificationResponse response) {
@@ -519,23 +561,29 @@ class ImageSearchNotifier extends StateNotifier<ImageSearchStateModel> {
     // If we have alternative matches from backend, use them
     if (response.alternativeMatches != null && response.alternativeMatches!.isNotEmpty) {
       for (final match in response.alternativeMatches!) {
+        // Get product type from the match itself, not from the main response
+        final matchProductType = match['product_type'] ?? _determineProductType(response);
+        final isDrugOrApp = matchProductType == 'drug' || matchProductType == 'drug_application';
+        
         final altProduct = GenericProduct(
           id: match['id'] ?? match['registration_number'] ?? 'unknown',
-          productType: _determineProductType(response),
+          productType: matchProductType,
           productName: match['product_name'] ?? match['generic_name'],
           brandName: match['brand_name'],
-          manufacturer: match['manufacturer'],
+          manufacturer: matchProductType == 'food' ? (match['company_name'] ?? match['manufacturer']) : match['manufacturer'],
           registrationNumber: match['registration_number'],
           licenseNumber: match['license_number'],
           documentTrackingNumber: match['document_tracking_number'],
           description: match['generic_name'],
           confidence: (match['relevance_score'] ?? 0.0).toDouble(),
           isVerified: true,
-          genericName: match['generic_name'],
-          dosageStrength: match['dosage_strength'],
-          dosageForm: match['dosage_form'],
-          classification: match['classification'],
-          pharmacologicCategory: match['pharmacologic_category'],
+          companyName: match['company_name'],
+          typeOfProduct: match['type_of_product'],
+          genericName: isDrugOrApp ? match['generic_name'] : null,
+          dosageStrength: isDrugOrApp ? match['dosage_strength'] : null,
+          dosageForm: isDrugOrApp ? match['dosage_form'] : null,
+          classification: isDrugOrApp ? match['classification'] : null,
+          pharmacologicCategory: isDrugOrApp ? match['pharmacologic_category'] : null,
           applicationType: match['application_type'],
           packaging: match['packaging'],
           countryOfOrigin: match['country_of_origin'],
